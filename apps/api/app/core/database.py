@@ -19,13 +19,12 @@ from apps.api.app.core.config import get_settings
 
 settings = get_settings()
 
-engine = create_async_engine(
-    settings.database_url,
-    pool_size=settings.database_pool_size,
-    max_overflow=settings.database_max_overflow,
-    echo=settings.debug,
-    future=True,
-)
+engine_kwargs: dict = {"echo": settings.debug, "future": True}
+if not settings.database_url.startswith("sqlite"):
+    engine_kwargs["pool_size"] = settings.database_pool_size
+    engine_kwargs["max_overflow"] = settings.database_max_overflow
+
+engine = create_async_engine(settings.database_url, **engine_kwargs)
 
 AsyncSessionLocal = async_sessionmaker(
     engine,
@@ -72,3 +71,10 @@ async def check_db_connectivity() -> bool:
         return True
     except Exception:
         return False
+
+
+async def init_db() -> None:
+    """Initialize all database tables."""
+    from apps.api.app.models import Base
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

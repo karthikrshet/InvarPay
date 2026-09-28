@@ -59,6 +59,20 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     else:
         logger.info("Using FAKE provider (no Razorpay credentials — set RAZORPAY_KEY_ID in .env)")
 
+    # Ensure tables exist and seed demo data
+    try:
+        from apps.api.app.core.database import init_db
+        await init_db()
+        logger.info("Database tables initialized")
+        if settings.seed_demo_data:
+            try:
+                from examples.demo_merchant.seed import seed_demo_data
+                await seed_demo_data()
+            except Exception as e:
+                logger.warning("Demo seed status: %s", e)
+    except Exception as e:
+        logger.warning("DB init status: %s", e)
+
     yield
 
     logger.info("InvarPay AI shutting down")
@@ -84,7 +98,7 @@ def create_app() -> FastAPI:
     # ── CORS ──────────────────────────────────────────────────────────────────
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000"] if settings.is_development else [],
+        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001"] if settings.is_development else [],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

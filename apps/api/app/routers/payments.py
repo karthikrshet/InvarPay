@@ -9,10 +9,10 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, Optional
 
-from fastapi import APIRouter, Depends, Header, HTTPException, status
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -297,3 +297,85 @@ async def get_investigation(
     if not inv:
         raise HTTPException(status_code=404, detail="Investigation not found")
     return InvestigationResponse.model_validate(inv)
+
+
+@router.get(
+    "/payments",
+    summary="List payment attempts",
+    description="List all payment attempts for the organization with optional status filtering.",
+)
+async def list_payments(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    status: Optional[str] = None,
+    ctx: TenantContext = Depends(require_scope("payments:read")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    query = select(PaymentAttempt).where(PaymentAttempt.organization_id == ctx.organization_id)
+    if status:
+        query = query.where(PaymentAttempt.status == status)
+
+    total = await db.scalar(
+        select(func.count(PaymentAttempt.id)).where(PaymentAttempt.organization_id == ctx.organization_id)
+    ) or 0
+
+    results = await db.execute(
+        query.order_by(PaymentAttempt.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    attempts = results.scalars().all()
+
+    return {
+        "items": [
+            {
+                "id": p.id,
+                "order_id": p.order_id,
+                "amount": p.amount,
+                "currency": p.currency,
+                "status": p.status.value if hasattr(p.status, "value") else str(p.status),
+                "provider": "razorpay" if "rzp" in (p.provider_payment_id or "") else "fake",
+                "provider_payment_id": p.provider_payment_id or "—",
+                "provider_order_id": p.provider_order_id or "—",
+                "idempotency_key": p.idempotency_key,
+                "is_reconciled": p.is_reconciled,
+                "created_at": p.created_at.isoformat() if p.created_at else None,
+                "captured_at": p.captured_at.isoformat() if p.captured_at else None,
+                "failed_at": p.failed_at.isoformat() if p.failed_at else None,
+            }
+            for p in attempts
+        ],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }
+
+
+@router.get(
+    "/investigations",
+    summary="List LangGraph investigations",
+)
+async def list_investigations(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    ctx: TenantContext = Depends(require_scope("investigations:read")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    query = select(Investigation).where(Investigation.organization_id == ctx.organization_id)
+    total = await db.scalar(
+        select(func.count(Investigation.id)).where(Investigation.organization_id == ctx.organization_id)
+    ) or 0
+
+    results = await db.execute(
+        query.order_by(Investigation.created_at.desc())
+        .offset((page - 1) * page_size)
+        .limit(page_size)
+    )
+    invs = results.scalars().all()
+
+    return {
+        "items": [InvestigationResponse.model_validate(inv).model_dump() for inv in invs],
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+    }

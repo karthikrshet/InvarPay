@@ -40,6 +40,9 @@ async def seed_demo_data() -> None:
     logger.info("🌱 Seeding SYNTHETIC demo data — NOT real payments")
     logger.info("   Marker: %s", SYNTHETIC_MARKER)
 
+    from apps.api.app.core.database import init_db
+    await init_db()
+
     async with get_db_context() as db:
         # Check if already seeded
         from sqlalchemy import select

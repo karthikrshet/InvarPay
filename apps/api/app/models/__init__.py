@@ -27,9 +27,13 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    JSON,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+# Dual-dialect compatibility: JSONB on PostgreSQL (indexes/binary), JSON on SQLite
+JSONB = JSON().with_variant(PG_JSONB, "postgresql")
 
 
 class Base(DeclarativeBase):

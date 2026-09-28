@@ -18,6 +18,11 @@ router = APIRouter()
 
 
 @router.get(
+    "/audit",
+    response_model=PaginatedResponse,
+    summary="Get audit log alias",
+)
+@router.get(
     "/audit-events",
     response_model=PaginatedResponse,
     summary="Get audit log",

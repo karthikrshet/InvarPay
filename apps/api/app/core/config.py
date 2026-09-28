@@ -29,8 +29,8 @@ class Settings(BaseSettings):
     secret_key: SecretStr = SecretStr("change-me-in-production")
     allowed_hosts: list[str] = ["localhost", "127.0.0.1"]
 
-    # Database
-    database_url: str = "postgresql+asyncpg://payguard:payguard_dev@localhost:5432/payguard"
+    # Database (supports postgresql+asyncpg or sqlite+aiosqlite)
+    database_url: str = "sqlite+aiosqlite:///payguard.db"
     database_pool_size: int = 10
     database_max_overflow: int = 20
 
@@ -93,8 +93,8 @@ class Settings(BaseSettings):
     @field_validator("database_url", mode="before")
     @classmethod
     def validate_db_url(cls, v: str) -> str:
-        if not v.startswith("postgresql"):
-            raise ValueError("DATABASE_URL must be a PostgreSQL connection string")
+        if not (v.startswith("postgresql") or v.startswith("sqlite")):
+            raise ValueError("DATABASE_URL must be a PostgreSQL or SQLite connection string")
         return v
 
     @property

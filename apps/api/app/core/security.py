@@ -22,9 +22,9 @@ import time
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+import bcrypt
 from cryptography.fernet import Fernet
 from jose import jwt
-from passlib.context import CryptContext
 
 from apps.api.app.core.config import get_settings
 
@@ -32,15 +32,18 @@ settings = get_settings()
 
 # ── Password hashing ──────────────────────────────────────────────────────────
 
-_pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
-
 def hash_password(password: str) -> str:
-    return _pwd_context.hash(password)
+    """Hash password using bcrypt (max 72 bytes)."""
+    pwd_bytes = password.encode("utf-8")[:72]
+    return bcrypt.hashpw(pwd_bytes, bcrypt.gensalt()).decode("utf-8")
 
 
 def verify_password(plain: str, hashed: str) -> bool:
-    return _pwd_context.verify(plain, hashed)
+    """Verify password against bcrypt hash."""
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8")[:72], hashed.encode("utf-8"))
+    except Exception:
+        return False
 
 
 # ── API Key generation ─────────────────────────────────────────────────────────
@@ -53,12 +56,12 @@ def generate_api_key(test_mode: bool = False) -> tuple[str, str]:
     prefix = settings.api_key_test_prefix if test_mode else settings.api_key_prefix
     raw = secrets.token_urlsafe(32)
     full_key = f"{prefix}{raw}"
-    key_hash = _pwd_context.hash(full_key)
+    key_hash = hash_password(full_key)
     return full_key, key_hash
 
 
 def verify_api_key(provided_key: str, stored_hash: str) -> bool:
-    return _pwd_context.verify(provided_key, stored_hash)
+    return verify_password(provided_key, stored_hash)
 
 
 # ── JWT ────────────────────────────────────────────────────────────────────────

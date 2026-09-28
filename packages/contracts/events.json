@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "InvarPay AI Outbox Events",
+  "description": "JSON schema for all events emitted through InvarPay AI transactional outbox",
+  "definitions": {
+    "BaseEvent": {
+      "type": "object",
+      "properties": {
+        "event_id": { "type": "string" },
+        "event_type": { "type": "string" },
+        "organization_id": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "payload": { "type": "object" }
+      },
+      "required": ["event_id", "event_type", "organization_id", "timestamp", "payload"]
+    },
+    "PaymentCapturedEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "event_type": { "const": "payment.captured" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "payment_attempt_id": { "type": "string" },
+                "order_id": { "type": "string" },
+                "amount": { "type": "integer" },
+                "currency": { "type": "string", "maxLength": 3 },
+                "provider": { "type": "string" },
+                "provider_payment_id": { "type": "string" }
+              },
+              "required": ["payment_attempt_id", "order_id", "amount", "currency", "provider"]
+            }
+          }
+        }
+      ]
+    },
+    "PaymentUnknownEvent": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "event_type": { "const": "payment.unknown" },
+            "payload": {
+              "type": "object",
+              "properties": {
+                "payment_attempt_id": { "type": "string" },
+                "reason": { "type": "string" },
+                "safe_to_retry": { "const": false }
+              },
+              "required": ["payment_attempt_id", "safe_to_retry"]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

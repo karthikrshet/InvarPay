@@ -1,0 +1,108 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "InvarPay AI API",
+    "version": "1.0.0",
+    "description": "Multi-tenant, AI-native financial operations platform combining payment reliability, fraud intelligence, code analysis, merchant finance, and agentic commerce. Independent open-source platform. Test mode only."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:8000/v1",
+      "description": "Local development server"
+    }
+  ],
+  "paths": {
+    "/organizations": {
+      "post": {
+        "summary": "Create Organization",
+        "operationId": "createOrganization",
+        "tags": ["Tenancy"]
+      }
+    },
+    "/provider-connections/test": {
+      "post": {
+        "summary": "Create or update a test-mode provider connection",
+        "operationId": "createTestProviderConnection",
+        "tags": ["Organizations & Auth"]
+      }
+    },
+    "/orders": {
+      "post": {
+        "summary": "Create Order",
+        "operationId": "createOrder",
+        "tags": ["Orders"]
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "summary": "Get Order",
+        "operationId": "getOrder",
+        "tags": ["Orders"]
+      }
+    },
+    "/orders/{order_id}/payment-attempts": {
+      "post": {
+        "summary": "Create a payment tracking attempt",
+        "operationId": "createPaymentAttempt",
+        "description": "Requires Idempotency-Key. This endpoint tracks an attempt and never captures funds or creates a charge.",
+        "tags": ["Payments"]
+      }
+    },
+    "/payments/{id}": {
+      "get": {
+        "summary": "Get Payment Attempt",
+        "operationId": "getPayment",
+        "tags": ["Payments"]
+      }
+    },
+    "/payments/{id}/recovery": {
+      "get": {
+        "summary": "Get Recovery Recommendation",
+        "operationId": "getRecoveryRecommendation",
+        "tags": ["Recovery"]
+      }
+    },
+    "/webhooks/razorpay": {
+      "post": {
+        "summary": "Ingest Razorpay Webhook",
+        "operationId": "ingestRazorpayWebhook",
+        "tags": ["Webhooks"]
+      }
+    },
+    "/webhooks/razorpay/connections/{connection_id}": {
+      "post": {
+        "summary": "Ingest Razorpay test-mode webhook for one connection",
+        "operationId": "ingestRazorpayConnectionWebhook",
+        "tags": ["Webhooks"]
+      }
+    },
+    "/risk/rules": {
+      "get": {
+        "summary": "List Fraud Rules",
+        "operationId": "listFraudRules",
+        "tags": ["PaymentGraph"]
+      }
+    },
+    "/paydev/rules": {
+      "get": {
+        "summary": "List Code Inspection Rules",
+        "operationId": "listPayDevRules",
+        "tags": ["PayDev"]
+      }
+    },
+    "/merchantos/summary": {
+      "get": {
+        "summary": "Get Financial Summary",
+        "operationId": "getMerchantSummary",
+        "tags": ["MerchantOS"]
+      }
+    },
+    "/shop/catalog": {
+      "get": {
+        "summary": "Browse Product Catalog",
+        "operationId": "browseCatalog",
+        "tags": ["ShopAgent"]
+      }
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "@invarpay/ui",
+  "version": "0.1.0",
+  "description": "Shared UI design tokens and components for InvarPay AI",
+  "main": "src/index.ts",
+  "license": "MIT"
+}

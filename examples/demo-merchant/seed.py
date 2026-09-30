@@ -31,7 +31,7 @@ async def seed_demo_data() -> None:
     from apps.api.app.models import (
         Organization, User, Membership, ApiKey, ProviderConnection,
         Customer, Order, PaymentAttempt, PaymentAttemptStatus,
-        AuditEvent,
+        AuditEvent, Product, InventorySnapshot,
     )
     from apps.api.app.utils.ids import new_id
     from apps.api.app.core.security import generate_api_key, compute_audit_event_hash
@@ -44,25 +44,25 @@ async def seed_demo_data() -> None:
     await init_db()
 
     async with get_db_context() as db:
-        # Check if already seeded
+        # Check if org exists
         from sqlalchemy import select
         existing = await db.execute(select(Organization).where(Organization.slug == "demo-merchant"))
-        if existing.scalar_one_or_none():
-            logger.info("✓ Demo data already seeded — skipping")
-            return
+        org = existing.scalar_one_or_none()
 
-        # ── Create demo organization ──────────────────────────────────────────
-        org = Organization(
-            id=new_id(),
-            name=f"Demo Merchant Inc. {SYNTHETIC_MARKER}",
-            slug="demo-merchant",
-            email="demo@payguard-ai.example",
-            is_active=True,
-            settings={"demo": True, "marker": SYNTHETIC_MARKER},
-        )
-        db.add(org)
-        await db.flush()
-        logger.info("  → Created organization: %s (%s)", org.name, org.id)
+        if not org:
+            # ── Create demo organization ──────────────────────────────────────────
+            org = Organization(
+                id=new_id(),
+                name=f"Demo Merchant Inc. {SYNTHETIC_MARKER}",
+                slug="demo-merchant",
+                email="demo@payguard-ai.example",
+                is_active=True,
+                settings={"demo": True, "marker": SYNTHETIC_MARKER},
+            )
+            db.add(org)
+            await db.flush()
+            logger.info("  → Created organization: %s (%s)", org.name, org.id)
+
 
         # ── Create demo user ──────────────────────────────────────────────────
         user = User(
@@ -196,24 +196,111 @@ async def seed_demo_data() -> None:
 
         await db.flush()
 
-        # ── Audit event for setup ─────────────────────────────────────────────
-        event_id = new_id()
-        audit = AuditEvent(
-            id=event_id,
-            organization_id=org.id,
-            actor_id="system",
-            actor_type="system",
-            action="demo.seeded",
-            resource_type="organization",
-            resource_id=org.id,
-            details={"marker": SYNTHETIC_MARKER, "scenarios": len(scenarios)},
-            event_hash=compute_audit_event_hash(
-                event_id, "demo.seeded", "organization", org.id,
-                datetime.now(timezone.utc).isoformat(), None
-            ),
-            occurred_at=datetime.now(timezone.utc),
-        )
-        db.add(audit)
+            # ── Audit event for setup ─────────────────────────────────────────────
+            event_id = new_id()
+            audit = AuditEvent(
+                id=event_id,
+                organization_id=org.id,
+                actor_id="system",
+                actor_type="system",
+                action="demo.seeded",
+                resource_type="organization",
+                resource_id=org.id,
+                details={"marker": SYNTHETIC_MARKER, "scenarios": len(scenarios)},
+                event_hash=compute_audit_event_hash(
+                    event_id, "demo.seeded", "organization", org.id,
+                    datetime.now(timezone.utc).isoformat(), None
+                ),
+                occurred_at=datetime.now(timezone.utc),
+            )
+            db.add(audit)
+            await db.flush()
+
+        # ── Ensure Product Catalog & Inventory Snapshots ───────────────────────
+        prod_check = await db.execute(select(Product).where(Product.organization_id == org.id))
+        existing_prods = prod_check.scalars().all()
+        if not existing_prods:
+            demo_products = [
+                {
+                    "name": "InvarPay Sentinel Hardware Node",
+                    "description": "High-throughput edge hardware security module for autonomous webhook verification & tamper-proofing.",
+                    "sku": "INVAR-HW-01",
+                    "price": 2499900,  # ₹24,999.00
+                    "currency": "INR",
+                    "extra_metadata": {"category": "Hardware", "stock": 45, "rating": 4.9, "badge": "Hardware HSM"},
+                    "quantity": 45,
+                },
+                {
+                    "name": "Enterprise PayDev AST Linter Suite",
+                    "description": "Static code analysis engine detecting webhook bugs, hardcoded secrets, and float rounding vulnerabilities.",
+                    "sku": "INVAR-DEV-S1",
+                    "price": 999900,   # ₹9,999.00
+                    "currency": "INR",
+                    "extra_metadata": {"category": "Software", "stock": 120, "rating": 5.0, "badge": "Developer Tool"},
+                    "quantity": 120,
+                },
+                {
+                    "name": "Autonomous Ledger Reconciler Box",
+                    "description": "Automated double-entry general ledger with real-time bank settlement UTR matching and dispute hold protection.",
+                    "sku": "INVAR-LEDGER-01",
+                    "price": 4999900,  # ₹49,999.00
+                    "currency": "INR",
+                    "extra_metadata": {"category": "Enterprise", "stock": 25, "rating": 4.8, "badge": "Financial Engine"},
+                    "quantity": 25,
+                },
+                {
+                    "name": "PaymentGraph AI Sentinel License",
+                    "description": "Multi-signal heuristic risk graph scoring velocity, proxy IPs, BIN mismatches, and synthetic chargeback vectors.",
+                    "sku": "INVAR-GRAPH-AI",
+                    "price": 1499900,  # ₹14,999.00
+                    "currency": "INR",
+                    "extra_metadata": {"category": "AI / ML", "stock": 80, "rating": 4.9, "badge": "Autonomous AI"},
+                    "quantity": 80,
+                },
+                {
+                    "name": "Cryptographic Merkle HSM Key Token",
+                    "description": "FIPS 140-3 Level 4 tamper-evident cryptographic USB token for SHA-256 audit log notarization.",
+                    "sku": "INVAR-HSM-K1",
+                    "price": 750000,   # ₹7,500.00
+                    "currency": "INR",
+                    "extra_metadata": {"category": "Hardware", "stock": 60, "rating": 4.7, "badge": "Security Token"},
+                    "quantity": 60,
+                },
+                {
+                    "name": "ShopAgent Safe Checkout Adapter",
+                    "description": "Autonomous commerce agent client with mandatory buyer confirmation gates and zero-card-retention guarantee.",
+                    "sku": "INVAR-SHOP-AGENT",
+                    "price": 1250000,  # ₹12,500.00
+                    "currency": "INR",
+                    "extra_metadata": {"category": "Software", "stock": 95, "rating": 4.9, "badge": "Agentic Commerce"},
+                    "quantity": 95,
+                },
+            ]
+
+            for p_info in demo_products:
+                prod = Product(
+                    id=new_id(),
+                    organization_id=org.id,
+                    name=p_info["name"],
+                    description=p_info["description"],
+                    sku=p_info["sku"],
+                    price=p_info["price"],
+                    currency=p_info["currency"],
+                    is_active=True,
+                    extra_metadata=p_info["extra_metadata"],
+                )
+                db.add(prod)
+                inv = InventorySnapshot(
+                    id=new_id(),
+                    organization_id=org.id,
+                    product_id=prod.id,
+                    quantity_available=p_info["quantity"],
+                    snapshot_at=datetime.now(timezone.utc),
+                )
+                db.add(inv)
+            await db.flush()
+            logger.info("  ✓ Seeded %d products and inventory snapshots", len(demo_products))
+
 
         logger.info("")
         logger.info("✅ Demo seeding complete!")

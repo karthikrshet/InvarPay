@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 
 from apps.api.app.core.auth import TenantContext, require_scope
-from modules.paydev.analyzer import analyze_repository
+from modules.paydev.analyzer import analyze_code_string, analyze_repository
 
 router = APIRouter()
 
@@ -32,6 +32,11 @@ class WebhookCheckRequest(BaseModel):
     webhook_secret: str = Field("test-secret-for-review", description="Webhook secret for test")
 
 
+class ScanCodeRequest(BaseModel):
+    code: str = Field(..., description="Python source code snippet to analyze")
+    filename: Optional[str] = Field("payment_handler.py", description="Filename or module name")
+
+
 @router.get("/paydev/rules", summary="List code inspection rules")
 async def list_rules() -> list[dict]:
     """List static analysis rules enforced by PayDev for payment integrations."""
@@ -44,27 +49,65 @@ async def list_rules() -> list[dict]:
             "description": "Detects hardcoded API keys, key secrets, and webhook secrets in source code",
         },
         {
+            "id": "SIG001",
+            "name": "Webhook Signature Verification",
+            "severity": "CRITICAL",
+            "category": "security",
+            "description": "Ensures raw byte body is used for HMAC-SHA256 signature verification to prevent tampering",
+        },
+        {
+            "id": "PCI001",
+            "name": "Cardholder PAN/CVV Logging",
+            "severity": "CRITICAL",
+            "category": "compliance",
+            "description": "Flags plaintext logging or printing of credit card PANs, expiry, or CVVs (PCI-DSS 3.3)",
+        },
+        {
             "id": "FIN001",
-            "name": "Float Currency",
+            "name": "Float Currency Arithmetic",
             "severity": "HIGH",
             "category": "accuracy",
             "description": "Detects floating-point math for currency amounts; enforces minor integer units (paise/cents)",
         },
         {
-            "id": "SIG001",
-            "name": "Webhook Signature Verification",
-            "severity": "HIGH",
-            "category": "security",
-            "description": "Ensures raw byte body is used for HMAC-SHA256 signature verification to prevent tampering",
-        },
-        {
             "id": "IDEM001",
             "name": "Missing Idempotency Key",
-            "severity": "MEDIUM",
+            "severity": "HIGH",
             "category": "reliability",
-            "description": "Flags payment mutation endpoints lacking durable idempotency headers",
+            "description": "Flags payment mutation endpoints lacking durable idempotency headers to prevent double charges",
+        },
+        {
+            "id": "REPLAY001",
+            "name": "Webhook Timestamp Drift",
+            "severity": "MEDIUM",
+            "category": "security",
+            "description": "Checks for webhook event age verification to prevent replay attacks beyond 300 seconds",
+        },
+        {
+            "id": "ERR001",
+            "name": "Error PII Leakage",
+            "severity": "MEDIUM",
+            "category": "privacy",
+            "description": "Checks customer PII is not leaked in raw unhandled exception strings",
+        },
+        {
+            "id": "AUTH001",
+            "name": "Missing Tenant Isolation Scopes",
+            "severity": "HIGH",
+            "category": "multitenancy",
+            "description": "Verifies every payment query has tenant-scoped WHERE organization_id filter",
         },
     ]
+
+
+@router.post("/paydev/scan-code", summary="Live AST scan of payment source code")
+async def scan_code_string(
+    req: ScanCodeRequest,
+    ctx: TenantContext = Depends(require_scope("payments:read")),
+) -> dict:
+    """Run real AST and regex checks on a code snippet and generate unified diff."""
+    return analyze_code_string(req.code, filename=req.filename or "payment_handler.py")
+
 
 
 @router.post("/paydev/analyze", summary="Analyze payment integration code")

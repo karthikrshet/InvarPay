@@ -125,3 +125,37 @@ class TestRepositoryAnalysis:
         with tempfile.TemporaryDirectory() as tmpdir:
             report = analyze_repository(tmpdir)
             assert "READ-ONLY" in report.disclaimer or "proposal" in report.disclaimer.lower()
+
+
+class TestCodeStringAnalysis:
+    """Test live AST scanning and diff remediation on code strings."""
+
+    def test_detects_hardcoded_key_and_generates_diff(self) -> None:
+        from modules.paydev.analyzer import analyze_code_string
+        snippet = 'client = razorpay.Client(auth=("rzp_live_SECRET999111888", "secret"))\n'
+        result = analyze_code_string(snippet, filename="test_payment.py")
+        assert result["total_issues"] >= 1
+        assert result["critical_count"] >= 1
+        assert "rzp_live_" in result["issues"][0]["description"] or "credential" in result["issues"][0]["category"]
+        assert result["unified_diff"] is not None
+        assert "--- a/test_payment.py" in result["unified_diff"]
+        assert "+++ b/test_payment.py" in result["unified_diff"]
+
+    def test_detects_float_currency_and_remediates(self) -> None:
+        from modules.paydev.analyzer import analyze_code_string
+        snippet = 'amount = 299.99\n'
+        result = analyze_code_string(snippet, filename="calc.py")
+        assert any(i["category"] == "float_currency" for i in result["issues"])
+        assert result["unified_diff"] is not None
+
+    def test_clean_code_is_compliant(self) -> None:
+        from modules.paydev.analyzer import analyze_code_string
+        snippet = (
+            "import os, hmac, hashlib\n"
+            "amount = 29900  # minor units\n"
+            "key = os.environ.get('RAZORPAY_KEY')\n"
+        )
+        result = analyze_code_string(snippet, filename="clean.py")
+        assert result["is_compliant"] is True
+        assert result["total_issues"] == 0
+

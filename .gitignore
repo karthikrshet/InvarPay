@@ -63,3 +63,6 @@ ml_models/
 *.tfstate
 *.tfstate.backup
 .terraform/
+
+# Internal Blueprints & Prompts
+MASTER_BLUEPRINT.md

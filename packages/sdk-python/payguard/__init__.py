@@ -1,4 +1,4 @@
-"""PayGuard AI Python SDK"""
+"""InvarPay AI Python SDK"""
 from payguard.client import PayGuardClient
 from payguard.models import PaymentAttempt, RecoveryRecommendation, RiskAssessment
 

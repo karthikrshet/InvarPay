@@ -1,5 +1,5 @@
 """
-PayGuard AI — Payment State Machine Unit Tests
+InvarPay AI — Payment State Machine Unit Tests
 
 Tests all valid and invalid transitions.
 SYNTHETIC: No real payment providers involved.

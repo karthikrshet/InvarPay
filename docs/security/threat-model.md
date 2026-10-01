@@ -1,4 +1,4 @@
-# PayGuard AI — Threat Model
+# InvarPay AI — Threat Model
 
 **Status:** Draft MVP  
 **Date:** 2024-09-22  

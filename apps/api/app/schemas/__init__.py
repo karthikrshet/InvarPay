@@ -1,5 +1,5 @@
 """
-PayGuard AI — Pydantic Request/Response Schemas
+InvarPay AI — Pydantic Request/Response Schemas
 
 All API contracts are defined here.
 Monetary amounts are always integers (minor units) + currency string.

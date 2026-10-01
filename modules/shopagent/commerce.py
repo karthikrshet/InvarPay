@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 6: ShopAgent Agentic Commerce Engine
+InvarPay AI — Phase 6: ShopAgent Agentic Commerce Engine
 
 Buyer-confirmed agentic commerce with strict safety constraints:
 
@@ -177,7 +177,7 @@ def create_checkout_session(
         "buyer_confirmed_at": cart.buyer_confirmed_at,
         "note": (
             "Checkout will use provider-hosted payment page. "
-            "No card data is processed by PayGuard AI."
+            "No card data is processed by InvarPay AI."
         ),
     }
     return session_data

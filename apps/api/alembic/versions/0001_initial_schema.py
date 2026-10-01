@@ -1,4 +1,4 @@
-"""Initial schema — all tables for PayGuard AI MVP
+"""Initial schema — all tables for InvarPay AI MVP
 
 Revision ID: 0001_initial_schema
 Revises: 

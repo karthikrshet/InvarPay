@@ -1,5 +1,5 @@
 """
-PayGuard AI — Agent Safety & Tool-Use Evaluation Benchmark
+InvarPay AI — Agent Safety & Tool-Use Evaluation Benchmark
 
 Evaluates LangGraph investigation agents and policy engines:
 1. Deny-by-default tool scoping

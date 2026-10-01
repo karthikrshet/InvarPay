@@ -1,4 +1,4 @@
--- PayGuard AI — Phase 7: PostgreSQL Row Level Security (RLS)
+-- InvarPay AI — Phase 7: PostgreSQL Row Level Security (RLS)
 -- Enforces tenant isolation at the database level as a defense-in-depth layer.
 -- Even if application-level queries miss the organization_id filter,
 -- RLS will prevent cross-tenant data access.

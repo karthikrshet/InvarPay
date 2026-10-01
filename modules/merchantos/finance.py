@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 5: MerchantOS Finance Engine
+InvarPay AI — Phase 5: MerchantOS Finance Engine
 
 Handles:
 - Invoice management (CRUD)

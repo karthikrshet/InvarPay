@@ -1,5 +1,5 @@
 """
-PayGuard AI — JWT & API Key Authentication
+InvarPay AI — JWT & API Key Authentication
 FastAPI dependencies for request authentication and tenant context.
 
 Tenant isolation invariant:

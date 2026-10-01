@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 6: ShopAgent Router
+InvarPay AI — Phase 6: ShopAgent Router
 
 GET  /v1/shop/catalog            — Browse authorized product catalog
 POST /v1/shop/cart               — Create a cart
@@ -286,6 +286,6 @@ async def initiate_checkout(
         "next_step": "Use checkout_session_id to retrieve provider payment URL",
         "note": (
             "Payment will be processed on provider-hosted page. "
-            "No card data is stored by PayGuard AI."
+            "No card data is stored by InvarPay AI."
         ),
     }

@@ -332,7 +332,7 @@ export default function LandingPage() {
               </div>
               <span className="badge badge-success">CORE INVARIANT</span>
             </div>
-            <h3 className="engine-title">PayGuard Engine</h3>
+            <h3 className="engine-title">InvarPay Core Engine</h3>
             <p className="engine-desc">
               Strict finite-state machine transitions preventing double-captures and out-of-order webhooks.
               Enforces integer minor-unit math and raw-body HMAC-SHA256 signature verification.
@@ -489,7 +489,7 @@ export default function LandingPage() {
               className={`sim-tab-btn ${activeTab === 'payguard' ? 'active' : ''}`}
             >
               <ShieldCheck size={16} />
-              <span>PayGuard State Machine</span>
+              <span>InvarPay State Machine</span>
             </button>
             <button
               onClick={() => setActiveTab('paydev')}
@@ -514,7 +514,7 @@ export default function LandingPage() {
             </button>
           </div>
 
-          {/* Tab 1: PayGuard State Machine */}
+          {/* Tab 1: InvarPay State Machine */}
           {activeTab === 'payguard' && (
             <div className="simulator-pane">
               <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32 }}>

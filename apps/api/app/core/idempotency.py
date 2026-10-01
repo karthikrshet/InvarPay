@@ -1,5 +1,5 @@
 """
-PayGuard AI — Durable Idempotency Store
+InvarPay AI — Durable Idempotency Store
 
 Prevents duplicate mutations from retried requests, duplicate webhooks,
 and concurrent race conditions.

@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 2: Recovery Router
+InvarPay AI — Phase 2: Recovery Router
 
 GET  /v1/payments/{id}/recovery  — Get recovery recommendation
 POST /v1/payments/{id}/recovery/execute  — Execute approved recovery action

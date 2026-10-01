@@ -1,5 +1,5 @@
 """
-PayGuard AI — Integration Tests: Full Payment Flow
+InvarPay AI — Integration Tests: Full Payment Flow
 
 Tests the complete end-to-end integration lifecycle:
 1. Order creation with minor units and currency

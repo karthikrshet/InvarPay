@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 4: PayDev Router
+InvarPay AI — Phase 4: PayDev Router
 
 POST /v1/paydev/analyze  — Analyze a code repository
 GET  /v1/paydev/sandbox/test  — Run a sandbox payment test

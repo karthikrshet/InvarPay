@@ -1,4 +1,4 @@
-# PayGuard AI Product Roadmap
+# InvarPay AI Product Roadmap
 
 ## Phase 0 — Foundation ✅ (Complete)
 - Monorepo structure

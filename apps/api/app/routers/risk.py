@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 3: PaymentGraph Router
+InvarPay AI — Phase 3: PaymentGraph Router
 
 GET  /v1/risk/{payment_id}  — Get risk assessment for a payment
 POST /v1/risk/{payment_id}/review — Submit human review decision

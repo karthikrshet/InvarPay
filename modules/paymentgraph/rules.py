@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 3: PaymentGraph Fraud Rule Engine
+InvarPay AI — Phase 3: PaymentGraph Fraud Rule Engine
 
 Deterministic, explainable fraud signal computation.
 NO black-box ML scores are presented as authoritative fraud labels.

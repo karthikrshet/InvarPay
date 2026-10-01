@@ -1,5 +1,5 @@
 """
-PayGuard AI — Razorpay Test-Mode Provider Adapter
+InvarPay AI — Razorpay Test-Mode Provider Adapter
 
 Integrates with Razorpay's test-mode API.
 TEST MODE ONLY — never accepts live credentials.

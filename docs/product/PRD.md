@@ -1,4 +1,4 @@
-# PayGuard AI — Product Requirements Document
+# InvarPay AI — Product Requirements Document
 
 **Version:** 0.1.0 (Phase 1 MVP)  
 **Status:** Active  
@@ -6,9 +6,9 @@
 
 ## Executive Summary
 
-PayGuard AI is an open-source, AI-native financial infrastructure platform for developers, startups, and fintech teams. It provides reliable payment tracking, fraud intelligence, developer tooling, merchant finance, and agentic commerce capabilities on a single shared infrastructure.
+InvarPay AI is an open-source, AI-native financial infrastructure platform for developers, startups, and fintech teams. It provides reliable payment tracking, fraud intelligence, developer tooling, merchant finance, and agentic commerce capabilities on a single shared infrastructure.
 
-**Independence:** PayGuard AI is an independent open-source project. It is not affiliated with Razorpay. The Razorpay adapter supports Razorpay as one payment provider in TEST MODE.
+**Independence:** InvarPay AI is an independent open-source project. It is not affiliated with Razorpay. The Razorpay adapter supports Razorpay as one payment provider in TEST MODE.
 
 ## Target Users
 

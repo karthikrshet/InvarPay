@@ -1,5 +1,5 @@
 """
-PayGuard AI — Audit Trail Helper
+InvarPay AI — Audit Trail Helper
 """
 from __future__ import annotations
 

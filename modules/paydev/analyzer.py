@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 4: PayDev Code Analysis Engine
+InvarPay AI — Phase 4: PayDev Code Analysis Engine
 
 Analyzes repository code for payment integration issues.
 Produces PROPOSED diffs — never modifies code without approval.

@@ -1,5 +1,5 @@
 """
-PayGuard AI — E2E Tests: Demo Workflow & API Endpoints
+InvarPay AI — E2E Tests: Demo Workflow & API Endpoints
 
 Verifies the HTTP API surface using FastAPI TestClient:
 - Health checks (liveness and readiness)

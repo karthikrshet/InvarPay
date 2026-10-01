@@ -1,8 +1,8 @@
-# PayGuard AI — Provider Capability Matrix
+# InvarPay AI — Provider Capability Matrix
 
 ## Overview
 
-PayGuard AI is designed as a **provider-neutral, multi-tenant financial operations platform**.
+InvarPay AI is designed as a **provider-neutral, multi-tenant financial operations platform**.
 This document defines the capability matrix between our supported integration adapters:
 1. **Fake Provider** — Deterministic test adapter used for CI, chaos simulations, and reproducible unit/integration tests.
 2. **Razorpay Test Adapter** — Official Razorpay API integration restricted strictly to **TEST MODE** (`rzp_test_*`).

@@ -1,5 +1,5 @@
 """
-PayGuard AI Python SDK — Client
+InvarPay AI Python SDK — Client
 """
 from __future__ import annotations
 

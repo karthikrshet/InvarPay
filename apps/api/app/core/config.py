@@ -1,5 +1,5 @@
 """
-PayGuard AI — Application Settings
+InvarPay AI — Application Settings
 Loaded from environment variables via pydantic-settings.
 All secrets come from env / secret manager — never hardcoded.
 """

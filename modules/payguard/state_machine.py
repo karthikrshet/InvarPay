@@ -1,5 +1,5 @@
 """
-PayGuard AI — Payment Attempt State Machine
+InvarPay AI — Payment Attempt State Machine
 
 Implements the formal payment state machine with strict transition guards.
 

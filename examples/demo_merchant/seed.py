@@ -1,5 +1,5 @@
 """
-PayGuard AI — Demo Merchant Seed Module (python-package alias)
+InvarPay AI — Demo Merchant Seed Module (python-package alias)
 """
 import sys
 import os

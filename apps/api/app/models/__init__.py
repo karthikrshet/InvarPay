@@ -1,5 +1,5 @@
 """
-PayGuard AI — SQLAlchemy ORM Models
+InvarPay AI — SQLAlchemy ORM Models
 Complete domain model for all five product modules.
 
 Key invariants enforced here:

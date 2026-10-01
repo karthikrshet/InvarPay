@@ -1,5 +1,5 @@
 """
-PayGuard AI — FastAPI Application Factory
+InvarPay AI — FastAPI Application Factory
 
 Assembles the complete FastAPI application with:
 - CORS, request ID, tenant context middleware

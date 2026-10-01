@@ -1,5 +1,5 @@
 """
-PayGuard AI — Security: Cross-Tenant Isolation Tests
+InvarPay AI — Security: Cross-Tenant Isolation Tests
 
 CRITICAL: These tests verify that Org A cannot read Org B's data.
 Tenant isolation must hold for ALL API endpoints.

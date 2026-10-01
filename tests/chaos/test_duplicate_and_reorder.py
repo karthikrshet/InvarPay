@@ -1,5 +1,5 @@
 """
-PayGuard AI — Chaos Tests: Duplicate Webhooks & Out-of-Order Delivery
+InvarPay AI — Chaos Tests: Duplicate Webhooks & Out-of-Order Delivery
 
 These tests verify that:
 1. Duplicate webhooks are safely ignored (idempotent)

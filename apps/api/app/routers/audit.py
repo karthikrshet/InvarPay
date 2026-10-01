@@ -1,5 +1,5 @@
 """
-PayGuard AI — Audit Events Router
+InvarPay AI — Audit Events Router
 
 GET /v1/audit-events — Paginated, tamper-evident audit log (tenant-scoped)
 """

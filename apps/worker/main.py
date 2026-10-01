@@ -1,5 +1,5 @@
 """
-PayGuard AI — Background Worker
+InvarPay AI — Background Worker
 
 Polls the transactional outbox and delivers events to:
 - Redis queues for async processing
@@ -130,7 +130,7 @@ async def handle_investigation_start(event: "OutboxEvent", db: object) -> None:
 async def main() -> None:
     """Worker main loop."""
     logging.basicConfig(level=logging.INFO)
-    logger.info("PayGuard AI Worker starting")
+    logger.info("InvarPay AI Worker starting")
 
     while True:
         try:

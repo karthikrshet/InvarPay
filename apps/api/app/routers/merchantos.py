@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 5: MerchantOS Router
+InvarPay AI — Phase 5: MerchantOS Router
 
 GET  /v1/invoices                 — List invoices
 POST /v1/invoices                 — Create invoice

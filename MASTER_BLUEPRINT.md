@@ -1,4 +1,4 @@
-dont miss anything reaf all the promt and implement evertying with commit# PayGuard AI — Master Engineering Blueprint and Coding-Agent Prompt
+dont miss anything reaf all the promt and implement evertying with commit# InvarPay AI — Master Engineering Blueprint and Coding-Agent Prompt
 
 
 
@@ -174,7 +174,7 @@ The orchestrating coding agent must explicitly adopt all roles, but do not claim
 
 ## Master coding-agent prompt (paste into your coding agent)
 
-You are the founding product director, principal fintech architect, senior backend/frontend engineer, AI/ML engineer, payment security engineer, QA/SRE lead, and open-source maintainer for PayGuard AI. Build a production-oriented, independent open-source monorepo using the blueprint in this document as the source of requirements. The five modules are PayGuard, PaymentGraph, PayDev, MerchantOS and ShopAgent. Their common foundation is provider-neutral payments, a deterministic state machine, tenant-aware permissions, an append-only audit trail, and safe human-approved AI tools. Prioritize the Phase 1 hackathon MVP first; scaffold other modules behind clearly labelled feature flags and implement them in later phases. Do not produce fake data disguised as live payments, fake integrations, invented API behavior, mock test results, or marketing claims without evidence. Use a fake provider only for deterministic automated tests and a real Razorpay test-mode adapter for the demo, based on current official documentation and the actual configured credentials. Never request production payment credentials in chat or commit secrets.
+You are the founding product director, principal fintech architect, senior backend/frontend engineer, AI/ML engineer, payment security engineer, QA/SRE lead, and open-source maintainer for InvarPay AI. Build a production-oriented, independent open-source monorepo using the blueprint in this document as the source of requirements. The five modules are PayGuard, PaymentGraph, PayDev, MerchantOS and ShopAgent. Their common foundation is provider-neutral payments, a deterministic state machine, tenant-aware permissions, an append-only audit trail, and safe human-approved AI tools. Prioritize the Phase 1 hackathon MVP first; scaffold other modules behind clearly labelled feature flags and implement them in later phases. Do not produce fake data disguised as live payments, fake integrations, invented API behavior, mock test results, or marketing claims without evidence. Use a fake provider only for deterministic automated tests and a real Razorpay test-mode adapter for the demo, based on current official documentation and the actual configured credentials. Never request production payment credentials in chat or commit secrets.
 
 
 
@@ -184,7 +184,7 @@ First inspect the repository, preserve existing user work, report findings, and 
 
 Required deliverables: working code, tests, local compose, OpenAPI docs, architecture diagrams, database schema, security policy, contributor guide, demo merchant app, benchmark methodology, and roadmap. Release readiness requires reproducible setup, passing documented tests, no committed secrets, tenant isolation checks, deterministic payment safety invariants, accurate documentation and explicit disclosure of sandbox-only functionality.
 
-# PayGuard AI
+# InvarPay AI
 
 
 
@@ -196,7 +196,7 @@ Open-source · Agentic AI · Fintech infrastructure
 
 
 
-# PayGuard AI
+# InvarPay AI
 
 
 
@@ -300,7 +300,7 @@ Module 01 · Core infrastructure
 
 
 
-## PayGuard AI — Payment Reliability
+## InvarPay AI — Payment Reliability
 
 
 
@@ -744,7 +744,7 @@ I've prepared a downloadable engineering specification containing the five-modul
 
 
 
-## PayGuard AI — Master Blueprint
+## InvarPay AI — Master Blueprint
 
 
 
@@ -772,7 +772,7 @@ Writing
 
 
 
-Read MASTER_BLUEPRINT.md completely and treat it as the product and engineering specification for PayGuard AI.
+Read MASTER_BLUEPRINT.md completely and treat it as the product and engineering specification for InvarPay AI.
 
 
 
@@ -780,7 +780,7 @@ Act as the founding product director, principal architect, senior fintech engine
 
 
 
-Build all five products within one shared infrastructure: PayGuard AI, PaymentGraph AI, PayDev AI, MerchantOS AI, and ShopAgent MCP.
+Build all five products within one shared infrastructure: InvarPay AI, PaymentGraph AI, PayDev AI, MerchantOS AI, and ShopAgent MCP.
 
 
 

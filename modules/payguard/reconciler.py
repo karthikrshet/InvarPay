@@ -1,5 +1,5 @@
 """
-PayGuard AI — Payment Reconciler
+InvarPay AI — Payment Reconciler
 
 Deterministic reconciliation of internal payment state against provider data.
 

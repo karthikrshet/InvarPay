@@ -1,5 +1,5 @@
 """
-PayGuard AI — Async Database Engine & Session Factory
+InvarPay AI — Async Database Engine & Session Factory
 
 Uses SQLAlchemy 2.0 async with connection pooling.
 All queries are org-scoped — use get_org_session() for tenant-aware access.

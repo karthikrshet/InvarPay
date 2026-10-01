@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 7: Rate Limiting Middleware
+InvarPay AI — Phase 7: Rate Limiting Middleware
 
 Per-tenant, per-endpoint rate limiting using Redis.
 Sliding window algorithm for accurate throttling.

@@ -1,5 +1,5 @@
 """
-PayGuard AI — Transactional Outbox
+InvarPay AI — Transactional Outbox
 
 Events are written to the outbox in the SAME database transaction as the
 business mutation. A background worker polls the outbox and delivers events

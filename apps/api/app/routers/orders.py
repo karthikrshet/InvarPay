@@ -1,5 +1,5 @@
 """
-PayGuard AI — Orders Router
+InvarPay AI — Orders Router
 
 POST /v1/orders    — Create order
 GET  /v1/orders    — List orders (tenant-scoped)

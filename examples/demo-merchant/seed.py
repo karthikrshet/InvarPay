@@ -1,5 +1,5 @@
 """
-PayGuard AI — Demo Seed Script
+InvarPay AI — Demo Seed Script
 
 Generates SYNTHETIC demo data for development and demonstration purposes.
 ALL data here is fictional. No real payments, real merchants, or real customers.

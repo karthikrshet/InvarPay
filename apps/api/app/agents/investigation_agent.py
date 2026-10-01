@@ -1,5 +1,5 @@
 """
-PayGuard AI — Investigation Agent (LangGraph)
+InvarPay AI — Investigation Agent (LangGraph)
 
 AI-assisted payment investigation with strict safety boundaries:
 - Read-only tools by default

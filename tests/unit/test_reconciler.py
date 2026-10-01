@@ -1,5 +1,5 @@
 """
-PayGuard AI — Reconciliation Unit Tests
+InvarPay AI — Reconciliation Unit Tests
 
 Tests deterministic reconciliation logic:
 - Amount match / mismatch

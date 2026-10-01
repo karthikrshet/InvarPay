@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 2: LangGraph Investigation Agent
+InvarPay AI — Phase 2: LangGraph Investigation Agent
 
 Full LangGraph implementation of the investigation agent.
 Features:

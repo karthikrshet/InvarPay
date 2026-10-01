@@ -1,6 +1,6 @@
-# Contributing to PayGuard AI
+# Contributing to InvarPay AI
 
-Thank you for your interest in contributing to PayGuard AI!
+Thank you for your interest in contributing to InvarPay AI!
 
 ## Before You Start
 

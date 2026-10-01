@@ -1,5 +1,5 @@
 """
-PayGuard AI — Organization Router
+InvarPay AI — Organization Router
 
 POST /v1/organizations — Create a new organization + owner user + demo API key
 GET  /v1/organizations/me — Get current organization

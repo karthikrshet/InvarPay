@@ -1,5 +1,5 @@
 """
-PayGuard AI — pytest conftest.py
+InvarPay AI — pytest conftest.py
 
 Shared fixtures for all test modules.
 All test data is SYNTHETIC. No real provider credentials used.

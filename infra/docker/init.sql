@@ -1,4 +1,4 @@
--- PayGuard AI — PostgreSQL initialization script
+-- InvarPay AI — PostgreSQL initialization script
 -- Enables extensions required by the application
 
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";

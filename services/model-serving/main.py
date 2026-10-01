@@ -1,5 +1,5 @@
 """
-PayGuard AI — Model Serving Microservice (Phase 3)
+InvarPay AI — Model Serving Microservice (Phase 3)
 
 Dedicated ML inference service for PaymentGraph risk scoring.
 Exposes low-latency inference endpoints for graph feature vectors.

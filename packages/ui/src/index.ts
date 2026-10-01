@@ -1,5 +1,5 @@
 /**
- * PayGuard AI Shared UI Tokens & Utilities
+ * InvarPay AI Shared UI Tokens & Utilities
  */
 
 export const colors = {

@@ -1,5 +1,5 @@
 """
-PayGuard AI — Payments Router
+InvarPay AI — Payments Router
 
 GET  /v1/payments/{id}              — Get payment attempt detail + timeline
 POST /v1/payments/{id}/reconcile    — Trigger reconciliation

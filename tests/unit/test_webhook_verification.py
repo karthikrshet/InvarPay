@@ -1,5 +1,5 @@
 """
-PayGuard AI — Webhook Security Unit Tests
+InvarPay AI — Webhook Security Unit Tests
 
 Tests:
 - Valid signature accepted

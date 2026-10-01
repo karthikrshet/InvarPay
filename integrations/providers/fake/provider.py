@@ -1,5 +1,5 @@
 """
-PayGuard AI — Fake Payment Provider
+InvarPay AI — Fake Payment Provider
 
 A fully deterministic fake payment provider for automated testing.
 ALL payments here are SYNTHETIC — clearly labelled, never real.

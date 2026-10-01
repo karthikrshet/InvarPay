@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 2: MCP Server (Model Context Protocol)
+InvarPay AI — Phase 2: MCP Server (Model Context Protocol)
 
 Exposes read-only PayGuard tools as MCP tools for AI assistants.
 Implements the MCP spec (JSON-RPC 2.0 over stdio or HTTP).
@@ -239,7 +239,7 @@ class MCPServer:
 def run_stdio_server(api_key: str, api_url: str = "http://localhost:8000") -> None:
     """Run MCP server over stdio (standard MCP transport)."""
     server = MCPServer(api_key=api_key, api_url=api_url)
-    logger.info("PayGuard AI MCP server starting (stdio transport)")
+    logger.info("InvarPay AI MCP server starting (stdio transport)")
 
     for line in sys.stdin:
         line = line.strip()

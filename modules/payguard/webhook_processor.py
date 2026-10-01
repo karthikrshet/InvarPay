@@ -1,5 +1,5 @@
 """
-PayGuard AI — Webhook Processor
+InvarPay AI — Webhook Processor
 
 Handles incoming provider webhook events with:
 1. Raw-body signature verification BEFORE parsing

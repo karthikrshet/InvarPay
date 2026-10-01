@@ -1,5 +1,5 @@
 """
-PayGuard AI Python SDK — Data Models
+InvarPay AI Python SDK — Data Models
 """
 from __future__ import annotations
 

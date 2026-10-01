@@ -1,5 +1,5 @@
 """
-PayGuard AI — Phase 2: Safe Recovery Engine
+InvarPay AI — Phase 2: Safe Recovery Engine
 
 Provides safe, idempotent recovery recommendations for payment incidents.
 ALL recovery actions require explicit human approval before execution.

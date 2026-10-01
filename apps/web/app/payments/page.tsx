@@ -323,7 +323,7 @@ export default function PaymentsPage() {
                   Invariant Core Principle: <code>unknown ≠ failed</code>
                 </span>
                 <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>
-                  Network timeouts must transition into <code>unknown</code>. PayGuard strictly blocks automatic re-attempts without prior authoritative reconciliation.
+                  Network timeouts must transition into <code>unknown</code>. InvarPay AI strictly blocks automatic re-attempts without prior authoritative reconciliation.
                 </p>
               </div>
             </div>

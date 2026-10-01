@@ -1,5 +1,5 @@
 """
-PayGuard AI — Fake Provider Unit Tests
+InvarPay AI — Fake Provider Unit Tests
 
 Tests the fake provider (SYNTHETIC — not real payments):
 - Order creation

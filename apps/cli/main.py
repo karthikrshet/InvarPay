@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PayGuard AI — CLI (Phase 2)
+InvarPay AI — CLI (Phase 2)
 
 Usage:
   payguard status <payment-id>

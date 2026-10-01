@@ -162,7 +162,7 @@ export default function DashboardConsolePage() {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <Link href="/payments" className="btn btn-outline btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <ShieldCheck size={14} color="#2563eb" />
-                  <span>PayGuard</span>
+                  <span>InvarPay</span>
                 </Link>
                 <Link href="/risk" className="btn btn-outline btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <Cpu size={14} color="#7e22ce" />

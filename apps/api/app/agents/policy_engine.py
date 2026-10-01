@@ -1,5 +1,5 @@
 """
-PayGuard AI — Agent Policy Engine (Deny-by-Default)
+InvarPay AI — Agent Policy Engine (Deny-by-Default)
 
 Enforces strict security invariants for all AI agent tool calls:
 1. Tenant scope verification (target_org_id == organization_id)

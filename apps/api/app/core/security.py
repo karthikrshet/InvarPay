@@ -1,5 +1,5 @@
 """
-PayGuard AI — Security Utilities
+InvarPay AI — Security Utilities
 
 Covers:
 - Webhook raw-body signature verification (HMAC-SHA256)

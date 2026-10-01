@@ -1,4 +1,4 @@
-# PayGuard AI — Phase 7: Production Deployment
+# InvarPay AI — Phase 7: Production Deployment
 
 ## Overview
 

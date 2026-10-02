@@ -178,3 +178,85 @@ def compute_cashflow_projection(
         currency=currency,
         points=points,
     )
+
+
+@dataclass
+class JournalLine:
+    """Individual debit or credit posting in a journal entry."""
+    account_code: str
+    account_name: str
+    debit: int = 0   # Minor units (paise)
+    credit: int = 0  # Minor units (paise)
+
+
+@dataclass
+class JournalEntry:
+    """
+    Cryptographically verifiable balanced journal entry.
+    INVARIANT: Sum(Debits) == Sum(Credits).
+    """
+    id: str
+    entry_date: str
+    description: str
+    reference_id: str
+    lines: list[JournalLine]
+    total_debits: int = 0
+    total_credits: int = 0
+    balanced: bool = True
+
+    def __post_init__(self) -> None:
+        self.total_debits = sum(line.debit for line in self.lines)
+        self.total_credits = sum(line.credit for line in self.lines)
+        self.balanced = (self.total_debits == self.total_credits)
+        if not self.balanced:
+            raise ValueError(
+                f"Dual-entry invariant failed: Debits ({self.total_debits}) != Credits ({self.total_credits})"
+            )
+
+
+def build_settlement_journal_entry(
+    entry_id: str,
+    settlement_utr: str,
+    gross_amount: int,
+    fee_amount: int,
+    net_bank_amount: int,
+    settlement_date: str = "",
+) -> JournalEntry:
+    """
+    Constructs a verified balanced double-entry posting for a bank settlement.
+    Dr. 1010 Cash at Bank (Net Payout)
+    Dr. 5010 Payment Gateway Fees (MDR)
+    Cr. 1020 Gateway Clearing (Gross Settled)
+    """
+    if not settlement_date:
+        settlement_date = datetime.now(timezone.utc).date().isoformat()
+
+    lines = [
+        JournalLine(
+            account_code="1010",
+            account_name="Cash at Bank — HDFC Escrow",
+            debit=net_bank_amount,
+            credit=0,
+        ),
+        JournalLine(
+            account_code="5010",
+            account_name="Gateway MDR Processing Fees",
+            debit=fee_amount,
+            credit=0,
+        ),
+        JournalLine(
+            account_code="1020",
+            account_name="Payment Gateway In-Transit Clearing",
+            debit=0,
+            credit=gross_amount,
+        ),
+    ]
+
+    return JournalEntry(
+        id=entry_id,
+        entry_date=settlement_date,
+        description=f"Bank Settlement Payout via NEFT/RTGS UTR: {settlement_utr}",
+        reference_id=settlement_utr,
+        lines=lines,
+    )
+

@@ -93,3 +93,38 @@ class TestCashflowProjection:
         projection = compute_cashflow_projection(history, "INR", 10)
         for point in projection.points:
             assert 0.0 <= point.confidence <= 1.0, f"Confidence out of range: {point.confidence}"
+
+
+class TestDualEntryLedger:
+    """Test double-entry bookkeeping invariants and settlement posting."""
+
+    def test_settlement_journal_entry_is_balanced(self) -> None:
+        from modules.merchantos.finance import build_settlement_journal_entry
+        entry = build_settlement_journal_entry(
+            entry_id="je_test_01",
+            settlement_utr="UTR998877665544",
+            gross_amount=100000,
+            fee_amount=2000,
+            net_bank_amount=98000,
+            settlement_date="2026-10-02",
+        )
+        assert entry.balanced is True
+        assert entry.total_debits == 100000
+        assert entry.total_credits == 100000
+        assert len(entry.lines) == 3
+
+    def test_unbalanced_journal_entry_raises_error(self) -> None:
+        import pytest
+        from modules.merchantos.finance import JournalEntry, JournalLine
+        with pytest.raises(ValueError, match="Dual-entry invariant failed"):
+            JournalEntry(
+                id="je_err",
+                entry_date="2026-10-02",
+                description="Unbalanced",
+                reference_id="ref_01",
+                lines=[
+                    JournalLine(account_code="1010", account_name="Cash", debit=100, credit=0),
+                    JournalLine(account_code="4010", account_name="Revenue", debit=0, credit=90),
+                ]
+            )
+

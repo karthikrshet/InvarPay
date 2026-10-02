@@ -124,8 +124,11 @@ export default function ShopPage() {
 
   const filteredCatalog = catalog.filter(p => {
     const matchesCat = selectedCategory === 'All' || p.category === selectedCategory
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          p.description.toLowerCase().includes(searchQuery.toLowerCase())
+    const q = searchQuery.toLowerCase()
+    const matchesSearch = Boolean(
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.description && p.description.toLowerCase().includes(q))
+    )
     return matchesCat && matchesSearch
   })
 

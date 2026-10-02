@@ -85,11 +85,11 @@ export default function AuditPage() {
   const filteredEvents = events.filter(e => {
     if (!searchTerm) return true
     const q = searchTerm.toLowerCase()
-    return (
-      e.id.toLowerCase().includes(q) ||
-      e.action.toLowerCase().includes(q) ||
-      e.resource_id.toLowerCase().includes(q) ||
-      e.actor.toLowerCase().includes(q)
+    return Boolean(
+      (e.id && e.id.toLowerCase().includes(q)) ||
+      (e.action && e.action.toLowerCase().includes(q)) ||
+      (e.resource_id && e.resource_id.toLowerCase().includes(q)) ||
+      (e.actor && e.actor.toLowerCase().includes(q))
     )
   })
 

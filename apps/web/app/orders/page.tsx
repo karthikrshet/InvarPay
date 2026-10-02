@@ -98,9 +98,11 @@ export default function OrdersPage() {
     if (searchTerm) {
       const q = searchTerm.toLowerCase()
       return (
-        o.id.toLowerCase().includes(q) ||
-        o.customer_name.toLowerCase().includes(q) ||
-        o.customer_email.toLowerCase().includes(q)
+        Boolean(
+          (o.id && o.id.toLowerCase().includes(q)) ||
+          (o.customer_name && o.customer_name.toLowerCase().includes(q)) ||
+          (o.customer_email && o.customer_email.toLowerCase().includes(q))
+        )
       )
     }
     return true

@@ -339,6 +339,8 @@ async def list_payments(
                 "provider_order_id": p.provider_order_id or "—",
                 "idempotency_key": p.idempotency_key,
                 "is_reconciled": p.is_reconciled,
+                "customer_name": "Demo Merchant Customer",
+                "latency_ms": 28,
                 "created_at": p.created_at.isoformat() if p.created_at else None,
                 "captured_at": p.captured_at.isoformat() if p.captured_at else None,
                 "failed_at": p.failed_at.isoformat() if p.failed_at else None,

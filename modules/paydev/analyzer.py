@@ -250,7 +250,6 @@ def analyze_code_string(code: str, filename: str = "handler.py") -> dict:
     Perform live AST and heuristic static analysis on a code string.
     Generates automated remediation and unified diff patch.
     """
-    import difflib
     issues: list[dict] = []
     lines = code.splitlines()
     remediated_lines = list(lines)

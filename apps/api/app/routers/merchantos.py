@@ -310,7 +310,7 @@ async def get_ledger_journal(
     payments = res.scalars().all()
 
     entries = []
-    for i, p in enumerate(payments):
+    for _i, p in enumerate(payments):
         gross = p.amount
         fee = int(gross * 0.02)
         net = gross - fee
@@ -361,6 +361,7 @@ async def reconcile_settlement_utr(
     Updates payment records and produces an immutable balanced journal entry.
     """
     from datetime import datetime, timezone
+
     from apps.api.app.models import PaymentAttempt, PaymentAttemptStatus
     from modules.merchantos.finance import build_settlement_journal_entry
 

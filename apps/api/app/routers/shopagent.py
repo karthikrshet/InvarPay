@@ -306,7 +306,7 @@ async def list_shop_products(
         select(Product).where(Product.organization_id == ctx.organization_id, Product.is_active.is_(True))
     )
     products = result.scalars().all()
-    
+
     items = []
     for p in products:
         inv_res = await db.execute(

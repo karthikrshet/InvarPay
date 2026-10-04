@@ -15,6 +15,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
+    JSON,
     BigInteger,
     Boolean,
     CheckConstraint,
@@ -27,7 +28,6 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
-    JSON,
 )
 from sqlalchemy.dialects.postgresql import JSONB as PG_JSONB
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship

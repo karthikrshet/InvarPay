@@ -406,7 +406,6 @@ async def create_live_simulation_payment(
     Creates real Order, Customer, PaymentAttempt, Outbox event, and AuditEvent in the database.
     Eliminates mock data by producing genuine transactional records.
     """
-    from datetime import timedelta
     from apps.api.app.core.security import compute_audit_event_hash
     from apps.api.app.models import AuditEvent, Customer, Order, OutboxEvent, OutboxStatus
 

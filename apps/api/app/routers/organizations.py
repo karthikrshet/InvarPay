@@ -242,7 +242,7 @@ async def list_api_keys(
     """List all API keys for the current organization."""
     res = await db.execute(
         select(ApiKey)
-        .where(ApiKey.organization_id == ctx.organization_id, ApiKey.is_active == True)
+        .where(ApiKey.organization_id == ctx.organization_id, ApiKey.is_active.is_(True))
         .order_by(ApiKey.created_at.desc())
     )
     keys = res.scalars().all()

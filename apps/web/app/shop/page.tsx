@@ -35,6 +35,8 @@ interface ProductItem {
   badge?: string
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 const DEFAULT_CATALOG: ProductItem[] = [
   {
     id: 'prod_enc_01',
@@ -124,7 +126,7 @@ export default function ShopPage() {
   useEffect(() => {
     async function loadCatalog() {
       try {
-        const res = await fetch('http://localhost:8000/v1/shop/products')
+        const res = await fetch(`${API_URL}/v1/shop/products`)
         if (res.ok) {
           const data = await res.json()
           if (data.items && data.items.length > 0) {
@@ -209,7 +211,7 @@ export default function ShopPage() {
 
     try {
       // Create real cart and checkout session in FastAPI
-      const cartRes = await fetch('http://localhost:8000/v1/shop/cart', {
+      const cartRes = await fetch(`${API_URL}/v1/shop/cart`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
       })
@@ -218,7 +220,7 @@ export default function ShopPage() {
         const cartId = cartData.id
 
         if (cart.length > 0 && cartId) {
-          await fetch(`http://localhost:8000/v1/shop/cart/${cartId}/items`, {
+          await fetch(`${API_URL}/v1/shop/cart/${cartId}/items`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -227,7 +229,7 @@ export default function ShopPage() {
             }),
           }).catch(() => {})
 
-          await fetch(`http://localhost:8000/v1/shop/cart/${cartId}/confirm`, {
+          await fetch(`${API_URL}/v1/shop/cart/${cartId}/confirm`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -236,7 +238,7 @@ export default function ShopPage() {
             }),
           }).catch(() => {})
 
-          const checkoutRes = await fetch(`http://localhost:8000/v1/shop/cart/${cartId}/checkout?provider_connection_id=conn_rzp_live`, {
+          const checkoutRes = await fetch(`${API_URL}/v1/shop/cart/${cartId}/checkout?provider_connection_id=conn_rzp_live`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
           })

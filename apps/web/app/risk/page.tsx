@@ -13,6 +13,8 @@ import {
   Zap,
 } from 'lucide-react'
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 export default function RiskPage() {
   const [velocity, setVelocity] = useState(3)
   const [amount, setAmount] = useState(25000)
@@ -46,7 +48,7 @@ export default function RiskPage() {
   const evaluateRisk = async (amt = amount, email = customerEmail, ip = ipAddress, isNew = isNewCustomer) => {
     setEvaluating(true)
     try {
-      const res = await fetch('http://localhost:8000/v1/risk/evaluate', {
+      const res = await fetch(`${API_URL}/v1/risk/evaluate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -72,7 +74,7 @@ export default function RiskPage() {
   useEffect(() => {
     async function loadRules() {
       try {
-        const res = await fetch('http://localhost:8000/v1/risk/rules')
+        const res = await fetch(`${API_URL}/v1/risk/rules`)
         if (res.ok) {
           const data = await res.json()
           setRules(data)

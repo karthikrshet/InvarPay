@@ -28,10 +28,12 @@ interface Issue {
   patch_diff: string
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 const PRESET_VULNERABLE = `# Sample Payment Gateway Handler (Vulnerable)
 import os, json, razorpay
 
-client = razorpay.Client(auth=("rzp_live_DEMO88776655KEY123", "secret_99887766"))
+client = razorpay.Client(auth=(api_key := "SAMPLE_KEY_UNSAFE_EXPOSED_8877", "secret_99887766"))
 
 def checkout_order(cart):
     # Float currency math vulnerability
@@ -92,9 +94,9 @@ export default function PayDevPage() {
       severity: 'CRITICAL',
       file: 'payment_handler.py',
       line: 4,
-      code_snippet: 'client = razorpay.Client(auth=("rzp_live_DEMO88776655KEY123", ...))',
+      code_snippet: 'client = razorpay.Client(auth=("EXPOSED_KEY_8877", ...))',
       description: 'Hardcoded live credential detected. Never commit live payment API keys to source control.',
-      patch_diff: `--- a/payment_handler.py\n+++ b/payment_handler.py\n@@ -4,1 +4,1 @@\n-client = razorpay.Client(auth=("rzp_live_DEMO88776655KEY123", "secret_99887766"))\n+client = razorpay.Client(auth=(os.environ.get("PAYMENT_PROVIDER_KEY"), os.environ.get("PAYMENT_PROVIDER_SECRET")))`,
+      patch_diff: `--- a/payment_handler.py\n+++ b/payment_handler.py\n@@ -4,1 +4,1 @@\n-client = razorpay.Client(auth=("EXPOSED_KEY_8877", "secret_99887766"))\n+client = razorpay.Client(auth=(os.environ.get("PAYMENT_PROVIDER_KEY"), os.environ.get("PAYMENT_PROVIDER_SECRET")))`,
     },
     {
       id: 'FIN-8',
@@ -125,7 +127,7 @@ export default function PayDevPage() {
   const runScan = async () => {
     setAnalyzing(true)
     try {
-      const res = await fetch('http://localhost:8000/v1/paydev/scan-code', {
+      const res = await fetch(`${API_URL}/v1/paydev/scan-code`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ code, filename: 'payment_handler.py' }),
@@ -184,7 +186,7 @@ export default function PayDevPage() {
   const loadRules = async () => {
     setActiveTab('AST_RULES')
     try {
-      const res = await fetch('http://localhost:8000/v1/paydev/rules')
+      const res = await fetch(`${API_URL}/v1/paydev/rules`)
       if (res.ok) {
         const data = await res.json()
         setRules(data)

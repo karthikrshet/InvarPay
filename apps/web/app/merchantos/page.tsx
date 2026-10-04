@@ -52,6 +52,8 @@ interface JournalEntry {
   }[]
 }
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
+
 export default function MerchantOSPage() {
   const [activeTab, setActiveTab] = useState<'SETTLEMENTS' | 'INVOICES' | 'PROJECTIONS'>('SETTLEMENTS')
   const [accounts, setAccounts] = useState<LedgerAccount[]>([])
@@ -67,21 +69,21 @@ export default function MerchantOSPage() {
     setLoading(true)
     try {
       // 1. Load accounts
-      const accRes = await fetch('http://localhost:8000/v1/ledger/accounts')
+      const accRes = await fetch(`${API_URL}/v1/ledger/accounts`)
       if (accRes.ok) {
         const accData = await accRes.json()
         setAccounts(accData.accounts || [])
       }
 
       // 2. Load journal
-      const jRes = await fetch('http://localhost:8000/v1/ledger/journal')
+      const jRes = await fetch(`${API_URL}/v1/ledger/journal`)
       if (jRes.ok) {
         const jData = await jRes.json()
         setJournalEntries(jData.entries || [])
       }
 
       // 3. Load invoices
-      const invRes = await fetch('http://localhost:8000/v1/invoices')
+      const invRes = await fetch(`${API_URL}/v1/invoices`)
       if (invRes.ok) {
         const invData = await invRes.json()
         setInvoices(invData.items || [])
@@ -100,7 +102,7 @@ export default function MerchantOSPage() {
     setReconciling(true)
     setReconciliationMsg(null)
     try {
-      const res = await fetch('http://localhost:8000/v1/ledger/reconcile-settlement', {
+      const res = await fetch(`${API_URL}/v1/ledger/reconcile-settlement`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

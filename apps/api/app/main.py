@@ -137,6 +137,7 @@ def create_app() -> FastAPI:
         )
 
     # ── Health endpoints ──────────────────────────────────────────────────────
+    @app.get("/health", response_model=HealthResponse, tags=["Health"])
     @app.get("/health/live", response_model=HealthResponse, tags=["Health"])
     async def liveness() -> HealthResponse:
         """Liveness check — always returns 200 if process is alive."""

@@ -408,7 +408,7 @@ async def create_live_simulation_payment(
     """
     from datetime import timedelta
     from apps.api.app.core.security import compute_audit_event_hash
-    from apps.api.app.models import AuditEvent, Customer, Order, OutboxMessage
+    from apps.api.app.models import AuditEvent, Customer, Order, OutboxEvent, OutboxStatus
 
     # 1. Customer
     cust_res = await db.execute(
@@ -469,10 +469,12 @@ async def create_live_simulation_payment(
     )
     db.add(attempt)
 
-    # 4. Outbox Message
-    outbox = OutboxMessage(
+    # 4. Outbox Event
+    outbox = OutboxEvent(
         id=new_id(),
         organization_id=ctx.organization_id,
+        aggregate_type="payment",
+        aggregate_id=attempt.id,
         event_type=f"payment.{outcome_status.value}",
         payload={
             "payment_id": attempt.id,
@@ -481,6 +483,8 @@ async def create_live_simulation_payment(
             "currency": attempt.currency,
             "status": outcome_status.value,
         },
+        status=OutboxStatus.PENDING,
+        next_attempt_at=now,
     )
     db.add(outbox)
 

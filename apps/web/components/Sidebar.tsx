@@ -14,7 +14,6 @@ import {
   ShoppingCart,
   Settings,
   Sparkles,
-  CheckCircle2,
   ChevronRight,
 } from 'lucide-react'
 
@@ -54,14 +53,31 @@ export function Sidebar() {
             </div>
           </div>
         </Link>
-        <div style={{ marginTop: 12, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <span className="logo-badge" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563eb' }} />
-            SYSTEM READY
-          </span>
-          <span className="logo-badge" style={{ background: '#ecfdf5', color: '#059669', borderColor: '#a7f3d0', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <CheckCircle2 size={10} />
-            158 TESTS PASS
+        <div style={{ marginTop: 10, display: 'flex', alignItems: 'center' }}>
+          <span
+            className="logo-badge"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 5,
+              background: '#ecfdf5',
+              color: '#059669',
+              borderColor: '#a7f3d0',
+              fontSize: 10.5,
+              fontWeight: 700,
+              padding: '2.5px 8px',
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: '#10b981',
+                boxShadow: '0 0 0 2px rgba(16, 185, 129, 0.25)',
+              }}
+            />
+            DEMO MODE
           </span>
         </div>
       </div>

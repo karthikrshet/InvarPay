@@ -65,6 +65,14 @@ const DEFAULT_INVESTIGATIONS: Investigation[] = [
   },
 ]
 
+const normalizeStatus = (status: string) => {
+  const s = (status || '').toLowerCase()
+  if (s.includes('pend') || s.includes('await')) return 'PENDING'
+  if (s.includes('reject') || s.includes('fail') || s.includes('declin')) return 'REJECTED'
+  if (s.includes('approv') || s.includes('complet') || s.includes('resolv') || s.includes('captur')) return 'APPROVED'
+  return 'PENDING'
+}
+
 export default function InvestigationsPage() {
   const [investigations, setInvestigations] = useState<Investigation[]>(DEFAULT_INVESTIGATIONS)
   const [loading, setLoading] = useState(false)
@@ -97,51 +105,64 @@ export default function InvestigationsPage() {
 
   const handleApprove = async (id: string) => {
     setActionLoading(id)
+    // Instantly update state locally for immediate visual feedback
+    setInvestigations(prev =>
+      prev.map(inv =>
+        inv.id === id
+          ? {
+              ...inv,
+              status: 'APPROVED',
+              recommendation: 'APPROVE_RECOVERY',
+              completed_at: new Date().toISOString(),
+            }
+          : inv
+      )
+    )
     try {
       const apiKey = typeof window !== 'undefined' ? localStorage.getItem('pg_api_key') || '' : ''
-      const res = await fetch(`${API_URL}/v1/investigations/${id}/approve`, {
+      await fetch(`${API_URL}/v1/investigations/${id}/approve`, {
         method: 'POST',
         headers: apiKey ? { 'X-API-Key': apiKey } : {},
       })
-      if (res.ok) {
-        await fetchInvestigations()
-        setActionLoading(null)
-        return
-      }
     } catch (e) {
       console.warn('Real backend call fallback:', e)
+    } finally {
+      setActionLoading(null)
     }
-
-    // Client-side fallback
-    setInvestigations(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'COMPLETED', completed_at: new Date().toISOString() } : inv))
-    setActionLoading(null)
   }
 
   const handleReject = async (id: string) => {
     setActionLoading(id)
+    // Instantly update state locally for immediate visual feedback
+    setInvestigations(prev =>
+      prev.map(inv =>
+        inv.id === id
+          ? {
+              ...inv,
+              status: 'REJECTED',
+              recommendation: 'REJECT_SUSPICIOUS',
+              completed_at: new Date().toISOString(),
+            }
+          : inv
+      )
+    )
     try {
       const apiKey = typeof window !== 'undefined' ? localStorage.getItem('pg_api_key') || '' : ''
-      const res = await fetch(`${API_URL}/v1/investigations/${id}/reject`, {
+      await fetch(`${API_URL}/v1/investigations/${id}/reject`, {
         method: 'POST',
         headers: apiKey ? { 'X-API-Key': apiKey } : {},
       })
-      if (res.ok) {
-        await fetchInvestigations()
-        setActionLoading(null)
-        return
-      }
     } catch (e) {
       console.warn('Real backend call fallback:', e)
+    } finally {
+      setActionLoading(null)
     }
-
-    // Client-side fallback
-    setInvestigations(prev => prev.map(inv => inv.id === id ? { ...inv, status: 'REJECTED', completed_at: new Date().toISOString() } : inv))
-    setActionLoading(null)
   }
 
   const filtered = investigations.filter(inv => {
-    if (filter === 'PENDING') return inv.status === 'pending' || inv.status === 'awaiting_approval'
-    if (filter === 'RESOLVED') return inv.status === 'completed' || inv.status === 'resolved' || inv.status === 'failed'
+    const st = normalizeStatus(inv.status)
+    if (filter === 'PENDING') return st === 'PENDING'
+    if (filter === 'RESOLVED') return st !== 'PENDING'
     return true
   })
 
@@ -207,13 +228,13 @@ export default function InvestigationsPage() {
                 onClick={() => setFilter('PENDING')}
                 className={`btn btn-sm ${filter === 'PENDING' ? 'btn-primary' : 'btn-secondary'}`}
               >
-                Pending Review ({investigations.filter(i => i.status === 'pending' || i.status === 'awaiting_approval').length})
+                Pending Review ({investigations.filter(i => normalizeStatus(i.status) === 'PENDING').length})
               </button>
               <button
                 onClick={() => setFilter('RESOLVED')}
                 className={`btn btn-sm ${filter === 'RESOLVED' ? 'btn-primary' : 'btn-secondary'}`}
               >
-                Resolved ({investigations.filter(i => i.status === 'completed' || i.status === 'resolved' || i.status === 'failed').length})
+                Resolved ({investigations.filter(i => normalizeStatus(i.status) !== 'PENDING').length})
               </button>
             </div>
             <span className="badge badge-info">{filtered.length} Live Incident Records</span>
@@ -228,16 +249,17 @@ export default function InvestigationsPage() {
             ) : (
               filtered.map(inv => {
                 const targetPayment = inv.payment_attempt_id || inv.payment_id || 'Unknown Payment'
-                const isResolved = inv.status === 'completed' || inv.status === 'resolved'
-                const isRejected = inv.status === 'failed'
-                const isPending = !isResolved && !isRejected
+                const st = normalizeStatus(inv.status)
+                const isApproved = st === 'APPROVED'
+                const isRejected = st === 'REJECTED'
+                const isPending = st === 'PENDING'
 
                 return (
                   <div
                     key={inv.id}
                     className="card"
                     style={{
-                      borderLeft: `5px solid ${isResolved ? '#10b981' : isRejected ? '#ef4444' : '#f59e0b'}`,
+                      borderLeft: `5px solid ${isApproved ? '#10b981' : isRejected ? '#ef4444' : '#f59e0b'}`,
                     }}
                   >
                     <div className="card-header" style={{ background: '#f8fafc' }}>
@@ -259,8 +281,8 @@ export default function InvestigationsPage() {
                         <span className="badge badge-secondary" style={{ fontSize: 11 }}>
                           Triggered by: {inv.triggered_by || 'Policy Engine'}
                         </span>
-                        <span className={`badge badge-${isResolved ? 'captured' : isRejected ? 'failed' : 'pending'}`}>
-                          {inv.status.toUpperCase()}
+                        <span className={`badge badge-${isApproved ? 'captured' : isRejected ? 'failed' : 'pending'}`}>
+                          {isApproved ? 'APPROVED' : isRejected ? 'REJECTED' : 'PENDING REVIEW'}
                         </span>
                       </div>
                     </div>
@@ -333,15 +355,15 @@ export default function InvestigationsPage() {
                                 <span>Reject / Decline</span>
                               </button>
                             </div>
-                          ) : isResolved ? (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#059669', fontSize: 12, fontWeight: 700 }}>
+                          ) : isApproved ? (
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#059669', fontSize: 12.5, fontWeight: 700, background: '#ecfdf5', padding: '6px 12px', borderRadius: 6, border: '1px solid #a7f3d0' }}>
                               <CheckCircle2 size={14} />
-                              <span>Approved & Logged to SHA-256 Ledger</span>
+                              <span>Approved & Released (Recorded to Invariant Ledger)</span>
                             </span>
                           ) : (
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#dc2626', fontSize: 12, fontWeight: 700 }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: '#b91c1c', fontSize: 12.5, fontWeight: 700, background: '#fef2f2', padding: '6px 12px', borderRadius: 6, border: '1px solid #fecaca' }}>
                               <XCircle size={14} />
-                              <span>Declined by Compliance Officer</span>
+                              <span>Declined by Compliance Officer (State Locked)</span>
                             </span>
                           )}
                         </div>

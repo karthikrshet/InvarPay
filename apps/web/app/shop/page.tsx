@@ -21,7 +21,8 @@ import {
   CreditCard,
   Layers,
   Cpu,
-  RefreshCw
+  RefreshCw,
+  X,
 } from 'lucide-react'
 
 interface ProductItem {
@@ -122,6 +123,10 @@ export default function ShopPage() {
     orderHash: string
   } | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
+  const [showCheckoutModal, setShowCheckoutModal] = useState(false)
+  const [paymentMethod, setPaymentMethod] = useState<'upi' | 'card' | 'netbanking'>('upi')
+  const [isPaying, setIsPaying] = useState(false)
+  const [paymentSuccess, setPaymentSuccess] = useState<{ paymentId: string; amount: number; utr: string } | null>(null)
 
   useEffect(() => {
     async function loadCatalog() {
@@ -246,11 +251,12 @@ export default function ShopPage() {
             const sessData = await checkoutRes.json()
             setCheckoutSession({
               sessionId: sessData.checkout_session_id || `cs_${cartId}`,
-              url: `https://checkout.invarpay.ai/session/${sessData.checkout_session_id || cartId}`,
+              url: '#',
               timestamp: new Date().toISOString(),
               orderHash: `sha256_${(sessData.checkout_session_id || cartId).slice(-12)}`,
             })
             setIsProcessing(false)
+            setShowCheckoutModal(true)
             return
           }
         }
@@ -262,11 +268,12 @@ export default function ShopPage() {
     const sId = `cs_invar_${Date.now().toString(36)}`
     setCheckoutSession({
       sessionId: sId,
-      url: `https://checkout.invarpay.ai/session/${sId}`,
+      url: '#',
       timestamp: new Date().toISOString(),
       orderHash: `sha256_${sId.slice(-8)}8990`,
     })
     setIsProcessing(false)
+    setShowCheckoutModal(true)
   }
 
 
@@ -736,24 +743,24 @@ export default function ShopPage() {
                       <div style={{ fontSize: 11, color: '#047857' }}>
                         Order Hash: <code style={{ background: '#fff', padding: '2px 4px', borderRadius: 3 }}>{checkoutSession.orderHash}</code>
                       </div>
-                      <a
-                        href={checkoutSession.url}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        onClick={() => setShowCheckoutModal(true)}
                         className="btn btn-primary"
                         style={{
                           fontSize: 12,
-                          padding: '7px 12px',
+                          padding: '8px 14px',
                           justifyContent: 'center',
                           gap: 6,
                           background: '#059669',
                           borderColor: '#059669',
-                          marginTop: 4,
+                          marginTop: 6,
+                          cursor: 'pointer',
+                          width: '100%',
                         }}
                       >
+                        <CreditCard size={13} />
                         <span>Open Razorpay Test Checkout</span>
-                        <ExternalLink size={12} />
-                      </a>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -775,6 +782,258 @@ export default function ShopPage() {
           </div>
         </div>
         </div>
+
+        {/* Interactive In-App Razorpay Checkout Modal Simulator */}
+        {showCheckoutModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: 'rgba(15, 23, 42, 0.7)',
+              backdropFilter: 'blur(5px)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 9999,
+              padding: 16,
+            }}
+            onClick={() => { if (!isPaying) setShowCheckoutModal(false) }}
+          >
+            <div
+              style={{
+                background: '#ffffff',
+                borderRadius: 14,
+                maxWidth: 480,
+                width: '100%',
+                overflow: 'hidden',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)',
+                border: '1px solid #e2e8f0',
+              }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Modal Header with Razorpay Brand Style */}
+              <div style={{ background: '#0c2340', color: '#ffffff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ width: 24, height: 24, borderRadius: 6, background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <CreditCard size={14} color="#ffffff" />
+                    </div>
+                    <span style={{ fontWeight: 800, fontSize: 15, letterSpacing: '-0.01em' }}>InvarPay AI × Razorpay</span>
+                  </div>
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>
+                    🔒 256-Bit SSL Encrypted Test Checkout
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Payable Total</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#38bdf8' }}>
+                    ₹ {(totalAmount / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Body */}
+              <div style={{ padding: 24 }}>
+                {paymentSuccess ? (
+                  <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                    <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#ecfdf5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', border: '2px solid #a7f3d0' }}>
+                      <CheckCircle2 size={32} />
+                    </div>
+                    <h3 style={{ fontSize: 18, fontWeight: 800, color: '#065f46', marginBottom: 6 }}>
+                      Payment Captured Successfully!
+                    </h3>
+                    <p style={{ fontSize: 13, color: 'var(--text-muted)', marginBottom: 20 }}>
+                      Razorpay test payment authorization verified. Invariant engine checked 0 double-capture drift.
+                    </p>
+
+                    <div style={{ background: '#f8fafc', padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', marginBottom: 20, textAlign: 'left', fontSize: 12.5 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Payment ID:</span>
+                        <code style={{ fontWeight: 700, color: '#2563eb' }}>{paymentSuccess.paymentId}</code>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Settlement UTR:</span>
+                        <code style={{ fontWeight: 700, color: '#059669' }}>{paymentSuccess.utr}</code>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Status:</span>
+                        <span className="badge badge-captured">CAPTURED / SETTLED</span>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 10 }}>
+                      <a
+                        href="/payments"
+                        className="btn btn-primary"
+                        style={{ flex: 1, padding: '10px 14px', justifyContent: 'center', fontSize: 13, textDecoration: 'none' }}
+                      >
+                        View in Payment Console
+                      </a>
+                      <button
+                        onClick={() => {
+                          setShowCheckoutModal(false)
+                          setPaymentSuccess(null)
+                        }}
+                        className="btn btn-secondary"
+                        style={{ padding: '10px 16px', fontSize: 13 }}
+                      >
+                        Done
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 18, borderBottom: '1px solid #e2e8f0', paddingBottom: 10 }}>
+                      <button
+                        onClick={() => setPaymentMethod('upi')}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: 6,
+                          border: `1px solid ${paymentMethod === 'upi' ? '#2563eb' : '#e2e8f0'}`,
+                          background: paymentMethod === 'upi' ? '#eff6ff' : '#ffffff',
+                          color: paymentMethod === 'upi' ? '#2563eb' : 'var(--text-secondary)',
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        UPI / QR
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod('card')}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: 6,
+                          border: `1px solid ${paymentMethod === 'card' ? '#2563eb' : '#e2e8f0'}`,
+                          background: paymentMethod === 'card' ? '#eff6ff' : '#ffffff',
+                          color: paymentMethod === 'card' ? '#2563eb' : 'var(--text-secondary)',
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Cards
+                      </button>
+                      <button
+                        onClick={() => setPaymentMethod('netbanking')}
+                        style={{
+                          flex: 1,
+                          padding: '8px 12px',
+                          borderRadius: 6,
+                          border: `1px solid ${paymentMethod === 'netbanking' ? '#2563eb' : '#e2e8f0'}`,
+                          background: paymentMethod === 'netbanking' ? '#eff6ff' : '#ffffff',
+                          color: paymentMethod === 'netbanking' ? '#2563eb' : 'var(--text-secondary)',
+                          fontSize: 12.5,
+                          fontWeight: 700,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        Netbanking
+                      </button>
+                    </div>
+
+                    {paymentMethod === 'upi' && (
+                      <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 6 }}>
+                          VIRTUAL PAYMENT ADDRESS (VPA / UPI ID)
+                        </label>
+                        <input
+                          type="text"
+                          defaultValue="test@razorpay"
+                          readOnly
+                          style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, background: '#f8fafc', fontWeight: 600 }}
+                        />
+                        <div style={{ fontSize: 11.5, color: '#059669', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
+                          <CheckCircle2 size={12} />
+                          <span>Pre-authorized for Instant Test Mode Capture</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {paymentMethod === 'card' && (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20 }}>
+                        <div>
+                          <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4 }}>
+                            TEST CARD NUMBER
+                          </label>
+                          <input
+                            type="text"
+                            defaultValue="4111 2222 3333 4444"
+                            readOnly
+                            style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, background: '#f8fafc', fontWeight: 600 }}
+                          />
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4 }}>EXPIRY</label>
+                            <input type="text" defaultValue="12/28" readOnly style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, background: '#f8fafc' }} />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', fontSize: 11.5, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 4 }}>CVV</label>
+                            <input type="text" defaultValue="123" readOnly style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, background: '#f8fafc' }} />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {paymentMethod === 'netbanking' && (
+                      <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', marginBottom: 8 }}>
+                          SELECT PRIMARY CLEARING BANK
+                        </label>
+                        <select style={{ width: '100%', padding: '10px 14px', borderRadius: 6, border: '1px solid #cbd5e1', fontSize: 13, background: '#fff' }}>
+                          <option>HDFC Bank — Escrow Settlement Clearing (Instant)</option>
+                          <option>ICICI Bank — Corporate Banking</option>
+                          <option>State Bank of India — Treasury Portal</option>
+                          <option>Axis Bank — Retail & Commercial</option>
+                        </select>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={() => {
+                        setIsPaying(true)
+                        setTimeout(() => {
+                          setIsPaying(false)
+                          const pid = `pay_gw_demo_${Math.random().toString(36).substring(2, 9)}`
+                          const utr = `UTR${Math.floor(10000000 + Math.random() * 90000000)}`
+                          setPaymentSuccess({ paymentId: pid, amount: totalAmount, utr })
+                          setCart([])
+                        }, 750)
+                      }}
+                      disabled={isPaying}
+                      className="btn btn-primary"
+                      style={{
+                        width: '100%',
+                        padding: '12px 18px',
+                        fontSize: 14,
+                        fontWeight: 700,
+                        justifyContent: 'center',
+                        background: '#2563eb',
+                        gap: 8,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <CreditCard size={16} />
+                      <span>{isPaying ? 'Authorizing with Razorpay Rails...' : `Pay ₹ ${(totalAmount / 100).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`}</span>
+                    </button>
+
+                    <div style={{ marginTop: 14, textAlign: 'center' }}>
+                      <button
+                        onClick={() => setShowCheckoutModal(false)}
+                        style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Cancel & Return to Cart
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

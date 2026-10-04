@@ -1043,10 +1043,12 @@ a:hover {
 }
 
 /* ── Console / Dashboard View Styles ── */
+.layout,
 .app-layout {
   display: flex;
-  min-height: calc(100vh - 35px);
+  min-height: 100vh;
   background: var(--bg-base);
+  width: 100%;
 }
 
 .sidebar {
@@ -1058,8 +1060,8 @@ a:hover {
   flex-direction: column;
   flex-shrink: 0;
   position: sticky;
-  top: 35px;
-  height: calc(100vh - 35px);
+  top: 0;
+  height: 100vh;
   overflow-y: auto;
   z-index: 40;
 }

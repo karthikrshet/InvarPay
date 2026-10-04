@@ -63,138 +63,137 @@ async def seed_demo_data() -> None:
             await db.flush()
             logger.info("  → Created organization: %s (%s)", org.name, org.id)
 
-
-        # ── Create demo user ──────────────────────────────────────────────────
-        user = User(
-            id=new_id(),
-            organization_id=org.id,
-            email="admin@payguard-ai.example",
-            hashed_password=hash_password("demo-password-123"),
-            full_name=f"Demo Admin {SYNTHETIC_MARKER}",
-            is_active=True,
-        )
-        db.add(user)
-
-        membership = Membership(
-            id=new_id(),
-            organization_id=org.id,
-            user_id=user.id,
-            role="owner",
-            is_active=True,
-        )
-        db.add(membership)
-        await db.flush()
-        logger.info("  → Created user: %s", user.email)
-
-        # ── Create test API key ───────────────────────────────────────────────
-        full_key, key_hash = generate_api_key(test_mode=True)
-        from apps.api.app.core.config import get_settings
-        s = get_settings()
-        api_key = ApiKey(
-            id=new_id(),
-            organization_id=org.id,
-            name=f"Demo Test Key {SYNTHETIC_MARKER}",
-            key_prefix=s.api_key_test_prefix,
-            key_hash=key_hash,
-            scopes="payments:read,orders:read,orders:write,payments:reconcile,investigations:write,investigations:read,audit:read,api_keys:write",
-            is_test_mode=True,
-            is_active=True,
-        )
-        db.add(api_key)
-        await db.flush()
-
-        # ── Create fake provider connection ───────────────────────────────────
-        provider_conn = ProviderConnection(
-            id=new_id(),
-            organization_id=org.id,
-            provider="fake",
-            display_name=f"Fake Provider {SYNTHETIC_MARKER}",
-            is_test_mode=True,
-            is_active=True,
-            encrypted_credentials=encrypt_credential("fake-key-id:fake-secret"),
-            encrypted_webhook_secret=encrypt_credential("fake-webhook-secret-for-tests"),
-            last_test_status="ok",
-        )
-        db.add(provider_conn)
-        await db.flush()
-        logger.info("  → Created fake provider connection")
-
-        # ── Create synthetic customers ────────────────────────────────────────
-        customers = []
-        for i in range(3):
-            c = Customer(
+            # ── Create demo user ──────────────────────────────────────────────────
+            user = User(
                 id=new_id(),
                 organization_id=org.id,
-                email=f"customer{i+1}@example.com",
-                name=f"Customer {i+1} {SYNTHETIC_MARKER}",
+                email="admin@payguard-ai.example",
+                hashed_password=hash_password("demo-password-123"),
+                full_name=f"Demo Admin {SYNTHETIC_MARKER}",
+                is_active=True,
             )
-            db.add(c)
-            customers.append(c)
-        await db.flush()
-        logger.info("  → Created %d synthetic customers", len(customers))
+            db.add(user)
 
-        # ── Create synthetic orders and payments ──────────────────────────────
-        scenarios = [
-            ("success", 50000, "INR", "Order for Product A"),
-            ("failure", 25000, "INR", "Order for Product B"),
-            ("unknown", 75000, "INR", "Order for Product C — TIMEOUT"),
-            ("success", 100000, "INR", "Order for Product D"),
-            ("success", 10099, "INR", "Order for Product E"),
-        ]
-
-        from integrations.providers.fake.provider import FakeProvider
-        fake_provider = FakeProvider("fake-webhook-secret-for-tests")
-
-        for i, (outcome, amount, currency, desc) in enumerate(scenarios):
-            order = Order(
+            membership = Membership(
                 id=new_id(),
                 organization_id=org.id,
-                amount=amount,
-                currency=currency,
-                description=f"{desc} {SYNTHETIC_MARKER}",
-                status="pending",
-                customer_id=customers[i % len(customers)].id,
+                user_id=user.id,
+                role="owner",
+                is_active=True,
             )
-            db.add(order)
+            db.add(membership)
+            await db.flush()
+            logger.info("  → Created user: %s", user.email)
+
+            # ── Create test API key ───────────────────────────────────────────────
+            full_key, key_hash = generate_api_key(test_mode=True)
+            from apps.api.app.core.config import get_settings
+            s = get_settings()
+            api_key = ApiKey(
+                id=new_id(),
+                organization_id=org.id,
+                name=f"Demo Test Key {SYNTHETIC_MARKER}",
+                key_prefix=s.api_key_test_prefix,
+                key_hash=key_hash,
+                scopes="payments:read,orders:read,orders:write,payments:reconcile,investigations:write,investigations:read,audit:read,api_keys:write",
+                is_test_mode=True,
+                is_active=True,
+            )
+            db.add(api_key)
             await db.flush()
 
-            # Simulate payment via fake provider
-            fake_order = fake_provider.create_order(amount, currency, receipt=order.id)
-            order.provider_order_id = fake_order["id"]
-
-            fake_payment = fake_provider.initiate_payment(fake_order["id"], outcome=outcome)
-            fake_provider.process_payment(fake_payment["id"])
-
-            # Map outcome to internal status
-            status_map = {
-                "success": PaymentAttemptStatus.CAPTURED,
-                "failure": PaymentAttemptStatus.FAILED,
-                "unknown": PaymentAttemptStatus.UNKNOWN,
-            }
-
-            now = datetime.now(timezone.utc)
-            attempt = PaymentAttempt(
+            # ── Create fake provider connection ───────────────────────────────────
+            provider_conn = ProviderConnection(
                 id=new_id(),
                 organization_id=org.id,
-                order_id=order.id,
-                amount=amount,
-                currency=currency,
-                status=status_map[outcome],
-                provider_status=fake_payment["status"],
-                provider_payment_id=fake_payment["id"],
-                provider_order_id=fake_order["id"],
-                idempotency_key=f"demo-{order.id}-attempt-1",
-                initiated_at=now - timedelta(minutes=5),
-                captured_at=now if outcome == "success" else None,
-                failed_at=now if outcome == "failure" else None,
-                is_reconciled=outcome != "unknown",
-                reconciled_at=now if outcome != "unknown" else None,
+                provider="fake",
+                display_name=f"Fake Provider {SYNTHETIC_MARKER}",
+                is_test_mode=True,
+                is_active=True,
+                encrypted_credentials=encrypt_credential("fake-key-id:fake-secret"),
+                encrypted_webhook_secret=encrypt_credential("fake-webhook-secret-for-tests"),
+                last_test_status="ok",
             )
-            db.add(attempt)
-            logger.info("  → Created %s payment: %s %d %s (ID: %s)",
-                       outcome.upper(), currency, amount, desc, attempt.id)
+            db.add(provider_conn)
+            await db.flush()
+            logger.info("  → Created fake provider connection")
 
-        await db.flush()
+            # ── Create synthetic customers ────────────────────────────────────────
+            customers = []
+            for i in range(3):
+                c = Customer(
+                    id=new_id(),
+                    organization_id=org.id,
+                    email=f"customer{i+1}@example.com",
+                    name=f"Customer {i+1} {SYNTHETIC_MARKER}",
+                )
+                db.add(c)
+                customers.append(c)
+            await db.flush()
+            logger.info("  → Created %d synthetic customers", len(customers))
+
+            # ── Create synthetic orders and payments ──────────────────────────────
+            scenarios = [
+                ("success", 50000, "INR", "Order for Product A"),
+                ("failure", 25000, "INR", "Order for Product B"),
+                ("unknown", 75000, "INR", "Order for Product C — TIMEOUT"),
+                ("success", 100000, "INR", "Order for Product D"),
+                ("success", 10099, "INR", "Order for Product E"),
+            ]
+
+            from integrations.providers.fake.provider import FakeProvider
+            fake_provider = FakeProvider("fake-webhook-secret-for-tests")
+
+            for i, (outcome, amount, currency, desc) in enumerate(scenarios):
+                order = Order(
+                    id=new_id(),
+                    organization_id=org.id,
+                    amount=amount,
+                    currency=currency,
+                    description=f"{desc} {SYNTHETIC_MARKER}",
+                    status="pending",
+                    customer_id=customers[i % len(customers)].id,
+                )
+                db.add(order)
+                await db.flush()
+
+                # Simulate payment via fake provider
+                fake_order = fake_provider.create_order(amount, currency, receipt=order.id)
+                order.provider_order_id = fake_order["id"]
+
+                fake_payment = fake_provider.initiate_payment(fake_order["id"], outcome=outcome)
+                fake_provider.process_payment(fake_payment["id"])
+
+                # Map outcome to internal status
+                status_map = {
+                    "success": PaymentAttemptStatus.CAPTURED,
+                    "failure": PaymentAttemptStatus.FAILED,
+                    "unknown": PaymentAttemptStatus.UNKNOWN,
+                }
+
+                now = datetime.now(timezone.utc)
+                attempt = PaymentAttempt(
+                    id=new_id(),
+                    organization_id=org.id,
+                    order_id=order.id,
+                    amount=amount,
+                    currency=currency,
+                    status=status_map[outcome],
+                    provider_status=fake_payment["status"],
+                    provider_payment_id=fake_payment["id"],
+                    provider_order_id=fake_order["id"],
+                    idempotency_key=f"demo-{order.id}-attempt-1",
+                    initiated_at=now - timedelta(minutes=5),
+                    captured_at=now if outcome == "success" else None,
+                    failed_at=now if outcome == "failure" else None,
+                    is_reconciled=outcome != "unknown",
+                    reconciled_at=now if outcome != "unknown" else None,
+                )
+                db.add(attempt)
+                logger.info("  → Created %s payment: %s %d %s (ID: %s)",
+                           outcome.upper(), currency, amount, desc, attempt.id)
+
+            await db.flush()
 
             # ── Audit event for setup ─────────────────────────────────────────────
             event_id = new_id()
@@ -301,13 +300,98 @@ async def seed_demo_data() -> None:
             await db.flush()
             logger.info("  ✓ Seeded %d products and inventory snapshots", len(demo_products))
 
+        # ── Ensure Sample Investigations for Unknown Payments ─────────────────
+        from apps.api.app.models import Investigation, InvestigationStatus
+        inv_check = await db.execute(select(Investigation).where(Investigation.organization_id == org.id))
+        existing_invs = inv_check.scalars().all()
+        if not existing_invs:
+            # Find an unknown or pending payment attempt
+            unknown_pay_res = await db.execute(
+                select(PaymentAttempt).where(
+                    PaymentAttempt.organization_id == org.id,
+                    PaymentAttempt.status == PaymentAttemptStatus.UNKNOWN,
+                ).limit(1)
+            )
+            unknown_pay = unknown_pay_res.scalar_one_or_none()
+            pay_id = unknown_pay.id if unknown_pay else "pay_demo_ambiguous_01"
+
+            sample_investigations = [
+                Investigation(
+                    id=new_id(),
+                    organization_id=org.id,
+                    payment_attempt_id=pay_id,
+                    status=InvestigationStatus.PENDING,
+                    triggered_by="InvarPay Policy Engine",
+                    trigger_reason="Provider returned 504 Gateway Timeout during capture call. Policy engine blocked blind retry.",
+                    findings={
+                        "risk_score": 78,
+                        "ip_reputation": "TOR_EXIT_NODE_SUSPECTED",
+                        "attempt_id": pay_id,
+                        "recommendation": "Require manual compliance verification before capture confirmation.",
+                    },
+                    recommendation="Hold capture until bank UTR confirmation is verified via MerchantOS.",
+                ),
+                Investigation(
+                    id=new_id(),
+                    organization_id=org.id,
+                    payment_attempt_id=pay_id,
+                    status=InvestigationStatus.COMPLETED,
+                    triggered_by="PaymentGraph Heuristic PG001",
+                    trigger_reason="High-velocity card retry detected (3 attempts in 45s). Verified merchant customer profile.",
+                    findings={
+                        "risk_score": 14,
+                        "card_hash_match": True,
+                        "chargeback_probability": "0.001%",
+                    },
+                    recommendation="Auto-cleared step-up verification. Payment authorized for settlement.",
+                    completed_at=datetime.now(timezone.utc),
+                ),
+            ]
+            for sinv in sample_investigations:
+                db.add(sinv)
+            await db.flush()
+            logger.info("  ✓ Seeded %d sample investigations", len(sample_investigations))
+
+        # ── Ensure Chained Audit Trail Events ─────────────────────────────────
+        from sqlalchemy import func
+        audit_check = await db.execute(select(func.count(AuditEvent.id)).where(AuditEvent.organization_id == org.id))
+        audit_count = audit_check.scalar() or 0
+        if audit_count < 4:
+            actions = [
+                ("payment.capture.verified", "payment_attempt", "webhook:razorpay-test", "HMAC-SHA256 signature verified with zero double-charge risk."),
+                ("webhook.signature.validated", "provider_event", "security:hmac-sha256", "Inbound payload verified against active secret key."),
+                ("retry.prevented.ambiguous_state", "payment_attempt", "state_machine:guard", "Automated retry blocked by deny-by-default safety policy."),
+                ("langgraph.dispute_triage.logged", "investigation", "langgraph:agent", "Autonomous dispute investigation completed and logged to ledger."),
+            ]
+            last_hash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            for i, (action, r_type, actor, note) in enumerate(actions):
+                ev_id = new_id()
+                occurred = datetime.now(timezone.utc) - timedelta(minutes=(40 - i * 8))
+                h = compute_audit_event_hash(
+                    ev_id, action, r_type, f"res_{i+1}", occurred.isoformat(), last_hash
+                )
+                last_hash = h
+                db.add(AuditEvent(
+                    id=ev_id,
+                    organization_id=org.id,
+                    actor_id=actor,
+                    actor_type="system",
+                    action=action,
+                    resource_type=r_type,
+                    resource_id=f"res_{i+1}",
+                    details={"note": note, "marker": SYNTHETIC_MARKER},
+                    event_hash=h,
+                    occurred_at=occurred,
+                ))
+            await db.flush()
+            logger.info("  ✓ Seeded %d chained audit events", len(actions))
 
         logger.info("")
         logger.info("✅ Demo seeding complete!")
         logger.info("")
         logger.info("  Organization:  %s", org.slug)
         logger.info("  Login:         admin@payguard-ai.example / demo-password-123")
-        logger.info("  API Key:       %s  (save this — shown once!)", full_key)
+        logger.info("  API Key:       %s  (save this — shown once!)", full_key if 'full_key' in locals() else 'pg_test_live_key_configured')
         logger.info("")
         logger.info("  Dashboard:     http://localhost:3000")
         logger.info("  API Docs:      http://localhost:8000/docs")

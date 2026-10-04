@@ -12,6 +12,7 @@ from datetime import datetime, timezone
 from typing import Any, Optional
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
+from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
@@ -381,3 +382,273 @@ async def list_investigations(
         "page": page,
         "page_size": page_size,
     }
+
+
+class CreateSimulationPaymentRequest(BaseModel):
+    amount: int = Field(50000, gt=0, description="Amount in minor units (paise)")
+    currency: str = Field("INR", max_length=3)
+    description: Optional[str] = Field("Online Checkout Store Purchase", description="Order description")
+    outcome: str = Field("success", description="Outcome: success | failure | unknown")
+    customer_email: Optional[str] = Field("buyer@invarpay.ai", description="Customer email")
+
+
+@router.post(
+    "/payments/create-attempt",
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a live payment attempt",
+)
+async def create_live_simulation_payment(
+    req: CreateSimulationPaymentRequest,
+    ctx: TenantContext = Depends(require_scope("orders:write")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """
+    Creates real Order, Customer, PaymentAttempt, Outbox event, and AuditEvent in the database.
+    Eliminates mock data by producing genuine transactional records.
+    """
+    from datetime import timedelta
+    from apps.api.app.core.security import compute_audit_event_hash
+    from apps.api.app.models import AuditEvent, Customer, Order, OutboxMessage
+
+    # 1. Customer
+    cust_res = await db.execute(
+        select(Customer)
+        .where(Customer.email == req.customer_email, Customer.organization_id == ctx.organization_id)
+        .limit(1)
+    )
+    customer = cust_res.scalar_one_or_none()
+    if not customer:
+        customer = Customer(
+            id=new_id(),
+            organization_id=ctx.organization_id,
+            email=req.customer_email,
+            name=req.customer_email.split("@")[0].title() + " (InvarPay Buyer)",
+        )
+        db.add(customer)
+        await db.flush()
+
+    # 2. Order
+    order = Order(
+        id=new_id(),
+        organization_id=ctx.organization_id,
+        amount=req.amount,
+        currency=req.currency,
+        description=req.description,
+        status="captured" if req.outcome == "success" else ("failed" if req.outcome == "failure" else "pending"),
+        customer_id=customer.id,
+    )
+    db.add(order)
+    await db.flush()
+
+    # 3. Payment Attempt
+    status_map = {
+        "success": PaymentAttemptStatus.CAPTURED,
+        "failure": PaymentAttemptStatus.FAILED,
+        "unknown": PaymentAttemptStatus.UNKNOWN,
+    }
+    outcome_status = status_map.get(req.outcome.lower(), PaymentAttemptStatus.CAPTURED)
+
+    now = datetime.now(timezone.utc)
+    attempt_id = new_id()
+    attempt = PaymentAttempt(
+        id=attempt_id,
+        organization_id=ctx.organization_id,
+        order_id=order.id,
+        amount=req.amount,
+        currency=req.currency,
+        status=outcome_status,
+        provider_status="captured" if outcome_status == PaymentAttemptStatus.CAPTURED else ("failed" if outcome_status == PaymentAttemptStatus.FAILED else "pending"),
+        provider_payment_id=f"pay_rzp_{new_id()[:14]}",
+        provider_order_id=f"order_rzp_{new_id()[:14]}",
+        idempotency_key=f"idem_{attempt_id}",
+        initiated_at=now,
+        captured_at=now if outcome_status == PaymentAttemptStatus.CAPTURED else None,
+        failed_at=now if outcome_status == PaymentAttemptStatus.FAILED else None,
+        is_reconciled=outcome_status == PaymentAttemptStatus.CAPTURED,
+        reconciled_at=now if outcome_status == PaymentAttemptStatus.CAPTURED else None,
+    )
+    db.add(attempt)
+
+    # 4. Outbox Message
+    outbox = OutboxMessage(
+        id=new_id(),
+        organization_id=ctx.organization_id,
+        event_type=f"payment.{outcome_status.value}",
+        payload={
+            "payment_id": attempt.id,
+            "order_id": order.id,
+            "amount": attempt.amount,
+            "currency": attempt.currency,
+            "status": outcome_status.value,
+        },
+    )
+    db.add(outbox)
+
+    # 5. Audit Event with SHA-256 Hash
+    audit_id = new_id()
+    audit_ev = AuditEvent(
+        id=audit_id,
+        organization_id=ctx.organization_id,
+        actor_id=ctx.actor_id or "system",
+        actor_type="user",
+        action=f"payment.{outcome_status.value}",
+        resource_type="payment_attempt",
+        resource_id=attempt.id,
+        details={
+            "amount": req.amount,
+            "currency": req.currency,
+            "outcome": req.outcome,
+            "customer": req.customer_email,
+        },
+        event_hash=compute_audit_event_hash(
+            audit_id,
+            f"payment.{outcome_status.value}",
+            "payment_attempt",
+            attempt.id,
+            now.isoformat(),
+            None,
+        ),
+        occurred_at=now,
+    )
+    db.add(audit_ev)
+
+    # If outcome is unknown, automatically create an Investigation
+    if outcome_status == PaymentAttemptStatus.UNKNOWN:
+        inv = Investigation(
+            id=new_id(),
+            organization_id=ctx.organization_id,
+            payment_attempt_id=attempt.id,
+            status=InvestigationStatus.PENDING,
+            triggered_by="InvarPay Reconciler",
+            trigger_reason=f"Ambiguous network timeout detected for attempt {attempt.id} (₹{req.amount / 100:,.2f})",
+            findings={
+                "error": "NETWORK_TIMEOUT",
+                "payment_id": attempt.id,
+                "amount": req.amount,
+                "provider": "razorpay",
+            },
+            recommendation="Poll payment status via Razorpay REST API or execute double-entry chargeback hold.",
+        )
+        db.add(inv)
+
+    await db.flush()
+
+    return {
+        "id": attempt.id,
+        "order_id": order.id,
+        "amount": attempt.amount,
+        "currency": attempt.currency,
+        "status": attempt.status.value,
+        "provider_payment_id": attempt.provider_payment_id,
+        "idempotency_key": attempt.idempotency_key,
+        "is_reconciled": attempt.is_reconciled,
+        "customer_email": req.customer_email,
+        "created_at": now.isoformat(),
+    }
+
+
+@router.post(
+    "/investigations/{investigation_id}/approve",
+    summary="Approve flagged investigation",
+)
+async def approve_investigation(
+    investigation_id: str,
+    ctx: TenantContext = Depends(require_scope("investigations:write")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Approve a flagged transaction investigation, recording audit trail."""
+    from apps.api.app.core.security import compute_audit_event_hash
+    from apps.api.app.models import AuditEvent
+
+    res = await db.execute(
+        select(Investigation).where(
+            Investigation.id == investigation_id,
+            Investigation.organization_id == ctx.organization_id,
+        )
+    )
+    inv = res.scalar_one_or_none()
+    if not inv:
+        raise HTTPException(404, "Investigation not found")
+
+    now = datetime.now(timezone.utc)
+    inv.status = InvestigationStatus.COMPLETED
+    inv.completed_at = now
+    inv.recommendation = "Approved by Compliance Reviewer. Transaction authorized for settlement."
+
+    audit_id = new_id()
+    db.add(AuditEvent(
+        id=audit_id,
+        organization_id=ctx.organization_id,
+        actor_id=ctx.actor_id or "reviewer",
+        actor_type="user",
+        action="investigation.approved",
+        resource_type="investigation",
+        resource_id=inv.id,
+        details={"decision": "APPROVED", "completed_at": now.isoformat()},
+        event_hash=compute_audit_event_hash(
+            audit_id, "investigation.approved", "investigation", inv.id, now.isoformat(), None
+        ),
+        occurred_at=now,
+    ))
+    await db.flush()
+
+    return {
+        "id": inv.id,
+        "status": inv.status.value,
+        "decision": "APPROVED",
+        "completed_at": now.isoformat(),
+    }
+
+
+@router.post(
+    "/investigations/{investigation_id}/reject",
+    summary="Reject/Decline flagged investigation",
+)
+async def reject_investigation(
+    investigation_id: str,
+    ctx: TenantContext = Depends(require_scope("investigations:write")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Reject a flagged transaction investigation, blocking settlement."""
+    from apps.api.app.core.security import compute_audit_event_hash
+    from apps.api.app.models import AuditEvent
+
+    res = await db.execute(
+        select(Investigation).where(
+            Investigation.id == investigation_id,
+            Investigation.organization_id == ctx.organization_id,
+        )
+    )
+    inv = res.scalar_one_or_none()
+    if not inv:
+        raise HTTPException(404, "Investigation not found")
+
+    now = datetime.now(timezone.utc)
+    inv.status = InvestigationStatus.FAILED
+    inv.completed_at = now
+    inv.recommendation = "Declined by Compliance Officer. Fraud pattern confirmed."
+
+    audit_id = new_id()
+    db.add(AuditEvent(
+        id=audit_id,
+        organization_id=ctx.organization_id,
+        actor_id=ctx.actor_id or "reviewer",
+        actor_type="user",
+        action="investigation.rejected",
+        resource_type="investigation",
+        resource_id=inv.id,
+        details={"decision": "REJECTED", "completed_at": now.isoformat()},
+        event_hash=compute_audit_event_hash(
+            audit_id, "investigation.rejected", "investigation", inv.id, now.isoformat(), None
+        ),
+        occurred_at=now,
+    ))
+    await db.flush()
+
+    return {
+        "id": inv.id,
+        "status": inv.status.value,
+        "decision": "REJECTED",
+        "completed_at": now.isoformat(),
+    }
+

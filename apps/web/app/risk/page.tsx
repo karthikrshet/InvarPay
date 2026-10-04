@@ -15,19 +15,80 @@ import {
 
 export default function RiskPage() {
   const [velocity, setVelocity] = useState(3)
-  const [amount, setAmount] = useState(15000)
-  const [countryMismatch, setCountryMismatch] = useState(false)
+  const [amount, setAmount] = useState(25000)
+  const [customerEmail, setCustomerEmail] = useState('shopper@tempmail.com')
+  const [ipAddress, setIpAddress] = useState('185.220.101.5')
+  const [isNewCustomer, setIsNewCustomer] = useState(true)
+  const [evaluating, setEvaluating] = useState(false)
+  const [evalResult, setEvalResult] = useState<{
+    composite_score: number
+    decision: string
+    recommendation: string
+    risk_tier: string
+    triggered_signals: any[]
+    investigation_id?: string
+    latency_ms: number
+  }>({
+    composite_score: 75,
+    decision: 'DECLINE',
+    recommendation: 'Reject transaction. Critical fraud risk indicators triggered.',
+    risk_tier: 'CRITICAL',
+    triggered_signals: [
+      { name: 'DISPOSABLE_EMAIL_DOMAIN', severity: 'CRITICAL', weight: 40, description: "Domain 'tempmail.com' identified as temporary disposable mailbox provider" },
+      { name: 'TOR_EXIT_NODE', severity: 'CRITICAL', weight: 30, description: 'Client IP 185.220.101.5 identified as active anonymizing TOR exit relay' },
+      { name: 'NEW_ACCOUNT_LARGE_TICKET', severity: 'MEDIUM', weight: 20, description: 'First-time customer attempting transaction above ₹15,000 without reputation history' },
+    ],
+    latency_ms: 12.4,
+  })
 
-  const rules = [
-    { id: 'PG001', name: 'high_velocity', category: 'Velocity Spike', weight: 2.0, confidence: 'high', description: 'Flags unusual payment attempt frequency within a 1-hour rolling window.' },
-    { id: 'PG002', name: 'amount_anomaly', category: 'Impossible Travel / Amount Outlier', weight: 1.0, confidence: 'medium', description: 'Flags orders significantly deviating from merchant typical ticket sizes.' },
-    { id: 'PG003', name: 'unverified_webhooks', category: 'Signature Tampering', weight: 3.0, confidence: 'high', description: 'Flags payment attempts associated with failed HMAC-SHA256 webhook signatures.' },
-    { id: 'PG004', name: 'repeated_unknown_outcomes', category: 'Ambiguity Exploitation', weight: 1.5, confidence: 'medium', description: 'Flags repeated network timeouts or ambiguous states on the same merchant account.' },
-  ]
+  const [rules, setRules] = useState<any[]>([])
 
-  const calculatedRisk = Math.min(99, Math.round((velocity * 12) + (amount > 50000 ? 30 : amount > 20000 ? 15 : 5) + (countryMismatch ? 40 : 0)))
-  const riskTier = calculatedRisk > 75 ? 'HIGH RISK (TRIGGER DISPUTE AGENT)' : calculatedRisk > 40 ? 'MEDIUM (STEP-UP 3DS CHALLENGE)' : 'LOW (AUTO-CLEAR)'
-  const riskColor = calculatedRisk > 75 ? '#dc2626' : calculatedRisk > 40 ? '#d97706' : '#059669'
+  const evaluateRisk = async (amt = amount, email = customerEmail, ip = ipAddress, isNew = isNewCustomer) => {
+    setEvaluating(true)
+    try {
+      const res = await fetch('http://localhost:8000/v1/risk/evaluate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amt * 100, // paise
+          currency: 'INR',
+          customer_email: email,
+          ip_address: ip,
+          is_new_customer: isNew,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        setEvalResult(data)
+        setEvaluating(false)
+        return
+      }
+    } catch (err) {
+      console.warn('Real risk API fallback:', err)
+    }
+    setEvaluating(false)
+  }
+
+  useEffect(() => {
+    async function loadRules() {
+      try {
+        const res = await fetch('http://localhost:8000/v1/risk/rules')
+        if (res.ok) {
+          const data = await res.json()
+          setRules(data)
+        }
+      } catch (e) {
+        console.warn('Could not load rules:', e)
+      }
+    }
+    loadRules()
+    evaluateRisk()
+  }, [])
+
+  const calculatedRisk = evalResult.composite_score
+  const riskTier = `${evalResult.risk_tier} • ${evalResult.decision}`
+  const riskColor = calculatedRisk >= 70 ? '#dc2626' : calculatedRisk >= 40 ? '#d97706' : '#059669'
+
 
   return (
     <div className="layout">
@@ -87,15 +148,17 @@ export default function RiskPage() {
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>Adjust transaction signals to observe real-time score adjustment</p>
                 </div>
               </div>
-              <span className="badge badge-verified">LIVE CLIENT-SIDE COMPUTE</span>
+              <span className="badge badge-verified">FASTAPI /v1/risk/evaluate</span>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 32 }}>
               <div>
-                <div style={{ marginBottom: 18 }}>
+                <div style={{ marginBottom: 14 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
                     <span>Order Amount: ₹ {amount.toLocaleString('en-IN')}</span>
-                    <span className="mono" style={{ color: 'var(--brand-primary)' }}>{amount > 50000 ? 'High Outlier' : 'Standard'}</span>
+                    <span className="mono" style={{ color: amount > 50000 ? '#dc2626' : 'var(--brand-primary)' }}>
+                      {amount >= 50000 ? 'High Outlier (+35)' : 'Standard Tier'}
+                    </span>
                   </div>
                   <input
                     type="range"
@@ -103,48 +166,110 @@ export default function RiskPage() {
                     max="100000"
                     step="1000"
                     value={amount}
-                    onChange={e => setAmount(Number(e.target.value))}
+                    onChange={e => {
+                      const val = Number(e.target.value)
+                      setAmount(val)
+                      evaluateRisk(val, customerEmail, ipAddress, isNewCustomer)
+                    }}
                     style={{ width: '100%' }}
                   />
                 </div>
 
-                <div style={{ marginBottom: 18 }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, fontWeight: 600, marginBottom: 6 }}>
-                    <span>Attempts in Last 10m: {velocity} tx</span>
-                    <span className="mono" style={{ color: velocity > 5 ? '#dc2626' : '#059669' }}>
-                      {velocity > 5 ? 'High Frequency Spike' : 'Normal'}
-                    </span>
-                  </div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                    CUSTOMER EMAIL ADDRESS
+                  </label>
                   <input
-                    type="range"
-                    min="1"
-                    max="10"
-                    value={velocity}
-                    onChange={e => setVelocity(Number(e.target.value))}
-                    style={{ width: '100%' }}
+                    type="email"
+                    value={customerEmail}
+                    onChange={e => {
+                      setCustomerEmail(e.target.value)
+                      evaluateRisk(amount, e.target.value, ipAddress, isNewCustomer)
+                    }}
+                    className="input mono"
+                    style={{ width: '100%', fontSize: 12.5, padding: '7px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
                   />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Try: <code style={{ cursor: 'pointer', color: '#2563eb' }} onClick={() => { setCustomerEmail('fraud@tempmail.com'); evaluateRisk(amount, 'fraud@tempmail.com', ipAddress, isNewCustomer) }}>fraud@tempmail.com</code> or <code style={{ cursor: 'pointer', color: '#059669' }} onClick={() => { setCustomerEmail('alice@company.in'); evaluateRisk(amount, 'alice@company.in', ipAddress, isNewCustomer) }}>alice@company.in</code>
+                  </div>
                 </div>
 
-                <div>
+                <div style={{ marginBottom: 14 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', display: 'block', marginBottom: 4 }}>
+                    CLIENT IP ADDRESS (GEOLOCATION & REPUTATION)
+                  </label>
+                  <input
+                    type="text"
+                    value={ipAddress}
+                    onChange={e => {
+                      setIpAddress(e.target.value)
+                      evaluateRisk(amount, customerEmail, e.target.value, isNewCustomer)
+                    }}
+                    className="input mono"
+                    style={{ width: '100%', fontSize: 12.5, padding: '7px 10px', borderRadius: 6, border: '1px solid #cbd5e1' }}
+                  />
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Try: <code style={{ cursor: 'pointer', color: '#dc2626' }} onClick={() => { setIpAddress('185.220.101.5'); evaluateRisk(amount, customerEmail, '185.220.101.5', isNewCustomer) }}>185.220.101.5 (TOR Relay)</code> or <code style={{ cursor: 'pointer', color: '#059669' }} onClick={() => { setIpAddress('103.21.244.2'); evaluateRisk(amount, customerEmail, '103.21.244.2', isNewCustomer) }}>103.21.244.2 (Standard IP)</code>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10 }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                     <input
                       type="checkbox"
-                      checked={countryMismatch}
-                      onChange={e => setCountryMismatch(e.target.checked)}
+                      checked={isNewCustomer}
+                      onChange={e => {
+                        setIsNewCustomer(e.target.checked)
+                        evaluateRisk(amount, customerEmail, ipAddress, e.target.checked)
+                      }}
                     />
-                    <span>Simulate IP Country / Card BIN Country Mismatch (+40 pts)</span>
+                    <span>New Unverified Account</span>
                   </label>
+                  <button
+                    onClick={() => evaluateRisk(amount, customerEmail, ipAddress, isNewCustomer)}
+                    disabled={evaluating}
+                    className="btn btn-primary btn-sm"
+                  >
+                    {evaluating ? 'Evaluating...' : 'Re-Evaluate Risk'}
+                  </button>
                 </div>
               </div>
 
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 20, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>COMPUTED RISK SCORE</span>
+              {/* Live Risk Score Output Card */}
+              <div style={{ background: '#f8fafc', border: `1px solid ${riskColor}`, borderRadius: 12, padding: 20, textAlign: 'center', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-muted)' }}>PAYMENTGRAPH AI RISK SCORE</span>
                 <div style={{ fontSize: 52, fontWeight: 800, color: riskColor, letterSpacing: -1, margin: '6px 0' }}>
                   {calculatedRisk} <span style={{ fontSize: 18, color: 'var(--text-muted)' }}>/ 100</span>
                 </div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: riskColor }}>
+                <div style={{ fontWeight: 800, fontSize: 14, color: riskColor, marginBottom: 8 }}>
                   {riskTier}
                 </div>
+                <p style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4, margin: '0 0 12px 0' }}>
+                  {evalResult.recommendation}
+                </p>
+
+                {/* Triggered Signals List */}
+                <div style={{ textAlign: 'left', background: '#ffffff', borderRadius: 8, padding: 10, border: '1px solid #e2e8f0', fontSize: 11.5 }}>
+                  <strong style={{ display: 'block', marginBottom: 4, color: 'var(--text-primary)' }}>Triggered Signals:</strong>
+                  {evalResult.triggered_signals.length > 0 ? (
+                    evalResult.triggered_signals.map((s, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', padding: '3px 0', borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ color: '#dc2626', fontWeight: 600 }}>• {s.name}</span>
+                        <span className="mono" style={{ color: 'var(--text-muted)' }}>+{s.weight} pts</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div style={{ color: '#059669' }}>✓ Zero negative fraud signals detected. Clean transaction.</div>
+                  )}
+                </div>
+
+                {evalResult.investigation_id && (
+                  <div style={{ marginTop: 10, fontSize: 11.5 }}>
+                    <a href="/investigations" style={{ color: '#2563eb', fontWeight: 700 }}>
+                      → View Escalated Investigation ({evalResult.investigation_id.slice(-8)})
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </div>

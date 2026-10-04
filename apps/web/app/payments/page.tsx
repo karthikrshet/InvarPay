@@ -41,123 +41,24 @@ interface PaymentAttempt {
   latency_ms?: number
 }
 
-const PRODUCTION_PAYMENTS: PaymentAttempt[] = [
-  {
-    id: 'pay_01HX98877119',
-    order_id: 'ord_rzp_991823',
-    amount: 149900,
-    currency: 'INR',
-    status: 'captured',
-    provider: 'razorpay',
-    provider_payment_id: 'pay_rzp_991823904',
-    idempotency_key: 'idemp_live_9a8f23bc11',
-    is_reconciled: true,
-    customer_name: 'Aditi Sharma',
-    created_at: '2026-09-28T13:42:10Z',
-    latency_ms: 18,
-  },
-  {
-    id: 'pay_01HX98864402',
-    order_id: 'ord_rzp_991820',
-    amount: 4999900,
-    currency: 'INR',
-    status: 'captured',
-    provider: 'razorpay',
-    provider_payment_id: 'pay_rzp_991820491',
-    idempotency_key: 'idemp_live_81920bbf24',
-    is_reconciled: true,
-    customer_name: 'Karthik Raja (Nexus Systems)',
-    created_at: '2026-09-28T13:10:45Z',
-    latency_ms: 24,
-  },
-  {
-    id: 'pay_01HX98851088',
-    order_id: 'ord_rzp_991811',
-    amount: 799900,
-    currency: 'INR',
-    status: 'unknown',
-    provider: 'razorpay',
-    provider_payment_id: 'pay_rzp_991811776_ambig',
-    idempotency_key: 'idemp_live_77301fa902',
-    is_reconciled: false,
-    customer_name: 'Deepak Verma',
-    created_at: '2026-09-28T12:45:00Z',
-    latency_ms: 5012, // simulated provider timeout
-  },
-  {
-    id: 'pay_01HX98839012',
-    order_id: 'ord_rzp_991799',
-    amount: 899900,
-    currency: 'INR',
-    status: 'captured',
-    provider: 'razorpay',
-    provider_payment_id: 'pay_rzp_991799104',
-    idempotency_key: 'idemp_live_66190ddb19',
-    is_reconciled: true,
-    customer_name: 'Priya Narang',
-    created_at: '2026-09-28T11:20:15Z',
-    latency_ms: 15,
-  },
-  {
-    id: 'pay_01HX98820451',
-    order_id: 'ord_rzp_991780',
-    amount: 1249900,
-    currency: 'INR',
-    status: 'failed',
-    provider: 'razorpay',
-    provider_payment_id: 'pay_rzp_991780443',
-    idempotency_key: 'idemp_live_55410cca88',
-    is_reconciled: true,
-    customer_name: 'Vikram Malhotra',
-    created_at: '2026-09-28T10:05:30Z',
-    latency_ms: 32,
-  },
-  {
-    id: 'pay_01HX98811099',
-    order_id: 'ord_rzp_991765',
-    amount: 1899900,
-    currency: 'INR',
-    status: 'captured',
-    provider: 'razorpay',
-    provider_payment_id: 'pay_rzp_991765112',
-    idempotency_key: 'idemp_live_44321bba77',
-    is_reconciled: true,
-    customer_name: 'Sneha Patel',
-    created_at: '2026-09-28T09:14:22Z',
-    latency_ms: 19,
-  },
-  {
-    id: 'pay_01HX98800912',
-    order_id: 'ord_rzp_991750',
-    amount: 299900,
-    currency: 'INR',
-    status: 'pending',
-    provider: 'razorpay',
-    provider_payment_id: 'pay_rzp_991750882',
-    idempotency_key: 'idemp_live_33210aa966',
-    is_reconciled: false,
-    customer_name: 'Rahul Sen',
-    created_at: '2026-09-28T08:30:11Z',
-    latency_ms: 22,
-  }
-]
-
 export default function PaymentsPage() {
-  const [payments, setPayments] = useState<PaymentAttempt[]>(PRODUCTION_PAYMENTS)
+  const [payments, setPayments] = useState<PaymentAttempt[]>([])
+  const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [searchQuery, setSearchQuery] = useState<string>('')
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [isSimulating, setIsSimulating] = useState(false)
 
-  useEffect(() => {
-    // Attempt to merge live API payments if available
-    const apiKey = typeof window !== 'undefined' ? localStorage.getItem('pg_api_key') || '' : ''
-    fetch(`${API_URL}/v1/payments`, {
-      headers: apiKey ? { 'X-API-Key': apiKey } : {}
-    })
-      .then(res => res.ok ? res.json() : null)
-      .then(data => {
-        if (data && Array.isArray(data.items) && data.items.length > 0) {
+  const fetchPayments = async () => {
+    setLoading(true)
+    try {
+      const apiKey = typeof window !== 'undefined' ? localStorage.getItem('pg_api_key') || '' : ''
+      const res = await fetch(`${API_URL}/v1/payments`, {
+        headers: apiKey ? { 'X-API-Key': apiKey } : {}
+      })
+      if (res.ok) {
+        const data = await res.json()
+        if (data && Array.isArray(data.items)) {
           const mapped = data.items.map((item: any) => ({
             ...item,
             customer_name: item.customer_name || 'Verified Merchant Account',
@@ -168,8 +69,16 @@ export default function PaymentsPage() {
           }))
           setPayments(mapped)
         }
-      })
-      .catch(() => {})
+      }
+    } catch (e) {
+      console.error('Failed to load payments from live API:', e)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    fetchPayments()
   }, [])
 
   const handleCopy = (text: string, id: string) => {
@@ -178,27 +87,37 @@ export default function PaymentsPage() {
     setTimeout(() => setCopiedId(null), 2000)
   }
 
-  const simulateNewPayment = (simulateStatus: 'captured' | 'unknown') => {
+  const simulateNewPayment = async (simulateOutcome: 'success' | 'unknown' | 'failure') => {
     setIsSimulating(true)
-    setTimeout(() => {
-      const randomHex = Math.random().toString(16).substring(2, 8)
-      const newPay: PaymentAttempt = {
-        id: `pay_01HX${Math.floor(10000000 + Math.random() * 90000000)}`,
-        order_id: `ord_rzp_${randomHex}`,
-        amount: Math.floor(Math.random() * 20000 + 1000) * 100,
-        currency: 'INR',
-        status: simulateStatus,
-        provider: 'razorpay',
-        provider_payment_id: `pay_rzp_${randomHex}_live`,
-        idempotency_key: `idemp_live_${randomHex}`,
-        is_reconciled: simulateStatus === 'captured',
-        customer_name: ['Arjun Mehta', 'Kavita Rao', 'Siddharth Roy', 'Ananya Gupta'][Math.floor(Math.random() * 4)],
-        created_at: new Date().toISOString(),
-        latency_ms: simulateStatus === 'unknown' ? 5000 : 16,
+    try {
+      const apiKey = typeof window !== 'undefined' ? localStorage.getItem('pg_api_key') || '' : ''
+      const randomPaise = Math.floor(Math.random() * 20000 + 1000) * 100
+      const customerEmails = ['aditi.sharma@techcorp.in', 'karthik@nexus-systems.io', 'deepak.v@mumbai-retail.in', 'priya.n@growthai.co']
+      const chosenEmail = customerEmails[Math.floor(Math.random() * customerEmails.length)]
+
+      const res = await fetch(`${API_URL}/v1/payments/create-attempt`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(apiKey ? { 'X-API-Key': apiKey } : {}),
+        },
+        body: JSON.stringify({
+          amount: randomPaise,
+          currency: 'INR',
+          description: simulateOutcome === 'unknown' ? 'Network Timeout Simulation — Ambiguous State' : 'Live Store Checkout Transaction',
+          outcome: simulateOutcome,
+          customer_email: chosenEmail,
+        }),
+      })
+
+      if (res.ok) {
+        await fetchPayments()
       }
-      setPayments([newPay, ...payments])
+    } catch (e) {
+      console.error('Failed to create payment simulation:', e)
+    } finally {
       setIsSimulating(false)
-    }, 500)
+    }
   }
 
   const filteredPayments = payments.filter(p => {
@@ -240,14 +159,23 @@ export default function PaymentsPage() {
             </p>
           </div>
 
-          <div style={{ display: 'flex', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button
-              onClick={() => simulateNewPayment('captured')}
+              onClick={fetchPayments}
+              disabled={loading}
+              className="btn btn-secondary"
+              style={{ fontSize: 13, gap: 6 }}
+            >
+              <RefreshCw size={13} className={loading ? 'spin' : ''} />
+              <span>Refresh</span>
+            </button>
+            <button
+              onClick={() => simulateNewPayment('success')}
               disabled={isSimulating}
               className="btn btn-primary"
               style={{ fontSize: 13, gap: 6 }}
             >
-              <Plus size={14} />
+              <Plus size={14} className={isSimulating ? 'spin' : ''} />
               <span>Simulate Captured</span>
             </button>
             <button
@@ -259,6 +187,16 @@ export default function PaymentsPage() {
             >
               <AlertTriangle size={14} color="#d97706" />
               <span>Simulate Timeout</span>
+            </button>
+            <button
+              onClick={() => simulateNewPayment('failure')}
+              disabled={isSimulating}
+              className="btn btn-secondary"
+              style={{ fontSize: 13, gap: 6, borderColor: '#fca5a5', color: '#b91c1c', background: '#fef2f2' }}
+              title="Simulate bank authorization decline"
+            >
+              <RotateCcw size={14} color="#dc2626" />
+              <span>Simulate Decline</span>
             </button>
           </div>
         </header>

@@ -32,7 +32,7 @@ export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<'payguard' | 'paydev' | 'risk' | 'merchantos'>('payguard')
   const [chatOpen, setChatOpen] = useState(false)
 
-  // PayGuard Simulator State
+  // InvarPay Simulator State
   const [simState, setSimState] = useState<'INITIATED' | 'PROCESSING' | 'SUCCESS' | 'FAILED'>('INITIATED')
   const [simLog, setSimLog] = useState<string[]>([
     'T0: Payment pay_01J8K901 initiated with amount 149900 INR (minor units).',

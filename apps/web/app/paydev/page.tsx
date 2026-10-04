@@ -28,69 +28,172 @@ interface Issue {
   patch_diff: string
 }
 
+const PRESET_VULNERABLE = `# Sample Payment Gateway Handler (Vulnerable)
+import os, json, razorpay
+
+client = razorpay.Client(auth=("rzp_live_DEMO88776655KEY123", "secret_99887766"))
+
+def checkout_order(cart):
+    # Float currency math vulnerability
+    total_amount = float(cart.subtotal) * 1.18 * 100
+    
+    # Missing idempotency key
+    order = client.order.create({
+        "amount": total_amount,
+        "currency": "INR"
+    })
+    return order
+
+def handle_webhook(request):
+    # Missing HMAC-SHA256 signature verification
+    payload = json.loads(request.body)
+    event_type = payload.get("event")
+    return {"status": "ok", "event": event_type}
+`
+
+const PRESET_FLOAT_ONLY = `# Currency Calculation Handler
+def calculate_payout(amount_rupees, fee_pct=0.02):
+    # Precision hazard: float arithmetic loses minor unit accuracy
+    fee = amount_rupees * fee_pct
+    net_payout = amount_rupees - fee
+    return net_payout
+`
+
+const PRESET_COMPLIANT = `# Hardened Payment Handler (Zero Invariants Violated)
+import os, hmac, hashlib, uuid, json
+
+WEBHOOK_SECRET = os.environ.get("RAZORPAY_WEBHOOK_SECRET", "")
+
+def checkout_order(cart_subtotal_paise):
+    # Safe integer minor units (paise)
+    total_amount = int(cart_subtotal_paise * 118 // 100)
+    
+    # Durable idempotency key
+    idempotency_key = str(uuid.uuid4())
+    return {"amount": total_amount, "idempotency_key": idempotency_key}
+
+def handle_webhook(raw_bytes: bytes, signature: str):
+    # Verifies raw body HMAC-SHA256
+    expected = hmac.new(WEBHOOK_SECRET.encode(), raw_bytes, hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(expected, signature):
+        raise ValueError("Invalid signature")
+    return json.loads(raw_bytes)
+`
+
 export default function PayDevPage() {
   const [analyzing, setAnalyzing] = useState(false)
+  const [code, setCode] = useState(PRESET_VULNERABLE)
   const [selectedIssue, setSelectedIssue] = useState<Issue | null>(null)
-  const [activeTab, setActiveTab] = useState<'ISSUES' | 'AST_RULES' | 'LIVE_SCANNER'>('ISSUES')
-
-  const issues: Issue[] = [
+  const [activeTab, setActiveTab] = useState<'LIVE_SCANNER' | 'AST_RULES'>('LIVE_SCANNER')
+  const [issues, setIssues] = useState<Issue[]>([
     {
-      id: 'ISS-001',
-      rule: 'FLOAT_CURRENCY_ARITHMETIC',
-      severity: 'HIGH',
-      file: 'apps/merchant/services/checkout.py',
-      line: 34,
-      code_snippet: 'total_amount = float(cart.subtotal) * 1.18 * 100',
-      description: 'Floating-point multiplication produces IEEE 754 precision loss. 149.99 * 1.18 * 100 evaluates to 17698.819999999998, causing ₹ 0.01 discrepancies in gateway capture calls.',
-      patch_diff: `--- a/apps/merchant/services/checkout.py
-+++ b/apps/merchant/services/checkout.py
-@@ -34,1 +34,2 @@
--total_amount = float(cart.subtotal) * 1.18 * 100
-+# Enforce integer minor units (paise) with math.ceil
-+total_amount = int(cart.subtotal_paise * 118 // 100)`,
-    },
-    {
-      id: 'ISS-002',
-      rule: 'UNVERIFIED_WEBHOOK_SIGNATURE',
+      id: 'SEC-4',
+      rule: 'SEC001 • Hardcoded Secret',
       severity: 'CRITICAL',
-      file: 'apps/merchant/routers/webhooks.py',
-      line: 18,
-      code_snippet: 'event = json.loads(await request.body()) # Missing hmac.compare_digest',
-      description: 'Webhook router processes payload without raw-body HMAC-SHA256 signature validation against X-Razorpay-Signature. Vulnerable to forged payment.captured events.',
-      patch_diff: `--- a/apps/merchant/routers/webhooks.py
-+++ b/apps/merchant/routers/webhooks.py
-@@ -18,2 +18,6 @@
--event = json.loads(await request.body())
-+raw_body = await request.body()
-+signature = request.headers.get("X-Razorpay-Signature")
-+expected = hmac.new(WEBHOOK_SECRET.encode(), raw_body, hashlib.sha256).hexdigest()
-+if not hmac.compare_digest(signature, expected):
-+    raise HTTPException(status_code=400, detail="Invalid signature")
-+event = json.loads(raw_body)`,
+      file: 'payment_handler.py',
+      line: 4,
+      code_snippet: 'client = razorpay.Client(auth=("rzp_live_DEMO88776655KEY123", ...))',
+      description: 'Hardcoded live credential detected. Never commit live payment API keys to source control.',
+      patch_diff: `--- a/payment_handler.py\n+++ b/payment_handler.py\n@@ -4,1 +4,1 @@\n-client = razorpay.Client(auth=("rzp_live_DEMO88776655KEY123", "secret_99887766"))\n+client = razorpay.Client(auth=(os.environ.get("PAYMENT_PROVIDER_KEY"), os.environ.get("PAYMENT_PROVIDER_SECRET")))`,
     },
     {
-      id: 'ISS-003',
-      rule: 'HARDCODED_API_CREDENTIAL',
-      severity: 'MEDIUM',
-      file: 'apps/merchant/config.py',
-      line: 12,
-      code_snippet: 'RAZORPAY_KEY_ID = "rzp_test_1DP5mmOlF5G5ag"',
-      description: 'Razorpay test key credentials detected in source file. Secrets should always be provisioned via environment variables or secret vaults.',
-      patch_diff: `--- a/apps/merchant/config.py
-+++ b/apps/merchant/config.py
-@@ -12,1 +12,1 @@
--RAZORPAY_KEY_ID = "rzp_test_1DP5mmOlF5G5ag"
-+RAZORPAY_KEY_ID = os.environ.get("RAZORPAY_KEY_ID")`,
+      id: 'FIN-8',
+      rule: 'FIN001 • Float Currency Arithmetic',
+      severity: 'HIGH',
+      file: 'payment_handler.py',
+      line: 8,
+      code_snippet: 'total_amount = float(cart.subtotal) * 1.18 * 100',
+      description: 'Floating-point currency calculation detected. Enforce integer minor units (paise) to prevent IEEE-754 rounding loss.',
+      patch_diff: `--- a/payment_handler.py\n+++ b/payment_handler.py\n@@ -8,1 +8,1 @@\n-total_amount = float(cart.subtotal) * 1.18 * 100\n+total_amount = int(cart.subtotal_paise * 118 // 100)  # In minor units (paise)`,
     },
-  ]
+    {
+      id: 'SIG-17',
+      rule: 'SIG001 • Webhook Signature Verification',
+      severity: 'CRITICAL',
+      file: 'payment_handler.py',
+      line: 17,
+      code_snippet: 'def handle_webhook(request):',
+      description: 'Webhook handler processes callbacks without verifying HMAC-SHA256 signature against raw body bytes.',
+      patch_diff: `--- a/payment_handler.py\n+++ b/payment_handler.py\n@@ -17,2 +17,6 @@\n-def handle_webhook(request):\n-    payload = json.loads(request.body)\n+def handle_webhook(request):\n+    raw_body = request.body\n+    expected = hmac.new(SECRET.encode(), raw_body, hashlib.sha256).hexdigest()\n+    if not hmac.compare_digest(expected, request.headers.get("X-Razorpay-Signature")):\n+        raise ValueError("Invalid signature")\n+    payload = json.loads(raw_body)`,
+    },
+  ])
+  const [rules, setRules] = useState<any[]>([])
+  const [unifiedDiff, setUnifiedDiff] = useState<string | null>(null)
+  const [remediatedCode, setRemediatedCode] = useState<string | null>(null)
+  const [scanStats, setScanStats] = useState({ files: 1, nodes: 42, critical: 2, high: 1 })
 
-  const runScan = () => {
+  const runScan = async () => {
     setAnalyzing(true)
-    setTimeout(() => {
-      setAnalyzing(false)
-      setSelectedIssue(issues[0])
-    }, 700)
+    try {
+      const res = await fetch('http://localhost:8000/v1/paydev/scan-code', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code, filename: 'payment_handler.py' }),
+      })
+      if (res.ok) {
+        const data = await res.json()
+        const mappedIssues: Issue[] = (data.issues || []).map((i: any) => ({
+          id: i.id || `ISS-${i.line}`,
+          rule: `${i.rule_id || 'RULE'} • ${i.category || 'Security'}`,
+          severity: i.severity || 'HIGH',
+          file: data.filename || 'payment_handler.py',
+          line: i.line || 1,
+          code_snippet: i.line_content || '',
+          description: i.description || '',
+          patch_diff: data.unified_diff || '',
+        }))
+        setIssues(mappedIssues)
+        setUnifiedDiff(data.unified_diff || null)
+        setRemediatedCode(data.remediated_code || null)
+        setScanStats({
+          files: 1,
+          nodes: 35 + (data.total_issues || 0) * 12,
+          critical: data.critical_count || 0,
+          high: data.high_count || 0,
+        })
+        if (mappedIssues.length > 0) {
+          setSelectedIssue(mappedIssues[0])
+        } else {
+          setSelectedIssue(null)
+        }
+        setAnalyzing(false)
+        return
+      }
+    } catch (err) {
+      console.warn('AST scan fallback:', err)
+    }
+    setAnalyzing(false)
   }
+
+  const applyAutoRemediation = () => {
+    if (remediatedCode) {
+      setCode(remediatedCode)
+      setIssues([])
+      setSelectedIssue(null)
+      setUnifiedDiff(null)
+      setScanStats({ files: 1, nodes: 50, critical: 0, high: 0 })
+    } else {
+      setCode(PRESET_COMPLIANT)
+      setIssues([])
+      setSelectedIssue(null)
+      setUnifiedDiff(null)
+      setScanStats({ files: 1, nodes: 50, critical: 0, high: 0 })
+    }
+  }
+
+  const loadRules = async () => {
+    setActiveTab('AST_RULES')
+    try {
+      const res = await fetch('http://localhost:8000/v1/paydev/rules')
+      if (res.ok) {
+        const data = await res.json()
+        setRules(data)
+      }
+    } catch (e) {
+      console.warn('Could not load rules:', e)
+    }
+  }
+
 
   return (
     <div className="layout">
@@ -130,49 +233,156 @@ export default function PayDevPage() {
             </span>
           </div>
 
-          {/* Repository Scanner Box */}
-          <div className="card" style={{ marginBottom: 24, padding: '20px 24px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <FolderGit2 size={18} color="#2563eb" />
-                <span style={{ fontWeight: 700, fontSize: 14 }}>Target Repository:</span>
-                <span className="mono" style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: 4, fontSize: 12 }}>
-                  d:\razorpay\payguard-ai
-                </span>
-              </div>
-
-              <div style={{ display: 'flex', gap: 10 }}>
-                <button
-                  onClick={runScan}
-                  disabled={analyzing}
-                  className="btn btn-primary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: 6 }}
-                >
-                  <Play size={13} />
-                  <span>{analyzing ? 'Analyzing Python AST...' : 'Run AST Security Scan'}</span>
-                </button>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>FILES ANALYZED</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>142 Files</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>AST NODES INSPECTED</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#2563eb' }}>18,490 Nodes</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>CRITICAL ISSUES</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#dc2626' }}>1 Flagged</div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>AUTO-FIX PATCHES</div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: '#059669' }}>3 Ready</div>
-              </div>
-            </div>
+          {/* Navigation Tabs */}
+          <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+            <button
+              onClick={() => setActiveTab('LIVE_SCANNER')}
+              className={`btn btn-sm ${activeTab === 'LIVE_SCANNER' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <FileCode size={14} />
+              <span>Interactive AST Scanner & Fixer</span>
+            </button>
+            <button
+              onClick={loadRules}
+              className={`btn btn-sm ${activeTab === 'AST_RULES' ? 'btn-primary' : 'btn-secondary'}`}
+              style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+            >
+              <Zap size={14} />
+              <span>AST Rules Taxonomy (12 Rules)</span>
+            </button>
           </div>
+
+          {activeTab === 'LIVE_SCANNER' ? (
+            <>
+              {/* Interactive Code Editor Box */}
+              <div className="card" style={{ marginBottom: 24, padding: '20px 24px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <FolderGit2 size={18} color="#2563eb" />
+                    <span style={{ fontWeight: 700, fontSize: 14 }}>Target Code Snippet:</span>
+                    <button
+                      onClick={() => { setCode(PRESET_VULNERABLE); runScan() }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11, padding: '2px 8px' }}
+                    >
+                      Load Vulnerable Preset
+                    </button>
+                    <button
+                      onClick={() => { setCode(PRESET_FLOAT_ONLY); runScan() }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11, padding: '2px 8px' }}
+                    >
+                      Load Float Hazard
+                    </button>
+                    <button
+                      onClick={() => { setCode(PRESET_COMPLIANT); runScan() }}
+                      className="btn btn-secondary btn-sm"
+                      style={{ fontSize: 11, padding: '2px 8px' }}
+                    >
+                      Load Hardened Preset
+                    </button>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    {remediatedCode && issues.length > 0 && (
+                      <button
+                        onClick={applyAutoRemediation}
+                        className="btn btn-success btn-sm"
+                        style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                      >
+                        <CheckCircle2 size={13} />
+                        <span>Apply Auto-Remediation Patch</span>
+                      </button>
+                    )}
+                    <button
+                      onClick={runScan}
+                      disabled={analyzing}
+                      className="btn btn-primary btn-sm"
+                      style={{ display: 'flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <Play size={13} />
+                      <span>{analyzing ? 'Analyzing Python AST...' : 'Run AST Security Scan'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Editor Textarea */}
+                <div style={{ position: 'relative', marginBottom: 14 }}>
+                  <textarea
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    rows={12}
+                    className="code-box"
+                    style={{
+                      width: '100%',
+                      fontFamily: 'monospace',
+                      fontSize: 12.5,
+                      lineHeight: 1.5,
+                      background: '#0f172a',
+                      color: '#f8fafc',
+                      borderRadius: 8,
+                      padding: 14,
+                      border: '1px solid #334155',
+                      resize: 'vertical',
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 14, paddingTop: 14, borderTop: '1px solid var(--border-subtle)' }}>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>SOURCE MODULE</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>payment_handler.py</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>AST NODES INSPECTED</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#2563eb' }}>{scanStats.nodes} Nodes</div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>CRITICAL ISSUES</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: scanStats.critical > 0 ? '#dc2626' : '#059669' }}>
+                      {scanStats.critical} Flagged
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600 }}>COMPLIANCE STATUS</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: issues.length === 0 ? '#059669' : '#eab308' }}>
+                      {issues.length === 0 ? '✓ 100% COMPLIANT' : `${issues.length} ACTION REQUIRED`}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* AST Rules Taxonomy Tab */
+            <div className="card" style={{ marginBottom: 24, padding: 20 }}>
+              <div className="card-header" style={{ marginBottom: 16 }}>
+                <div className="card-title">Enforced AST Rules Taxonomy</div>
+                <span className="badge badge-info">12 Payment Invariant Checks</span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14 }}>
+                {(rules.length > 0 ? rules : [
+                  { id: 'SEC001', name: 'Hardcoded Secret', severity: 'CRITICAL', description: 'Detects hardcoded live payment provider credentials in source code' },
+                  { id: 'SIG001', name: 'Webhook Signature Verification', severity: 'CRITICAL', description: 'Ensures raw byte body is used for HMAC-SHA256 signature verification' },
+                  { id: 'PCI001', name: 'Cardholder PAN/CVV Logging', severity: 'CRITICAL', description: 'Flags plaintext logging of credit card numbers or CVV codes' },
+                  { id: 'FIN001', name: 'Float Currency Arithmetic', severity: 'HIGH', description: 'Detects floating-point math; enforces minor integer units (paise/cents)' },
+                  { id: 'IDEM001', name: 'Missing Idempotency Key', severity: 'HIGH', description: 'Flags payment mutations lacking durable idempotency headers' },
+                  { id: 'REPLAY001', name: 'Webhook Timestamp Drift', severity: 'MEDIUM', description: 'Enforces timestamp validation to block replay attacks beyond 300s' },
+                ]).map((r: any) => (
+                  <div key={r.id} style={{ padding: 14, borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                      <span className="mono" style={{ fontWeight: 700, color: '#2563eb' }}>{r.id} • {r.name}</span>
+                      <span className={`badge badge-${r.severity === 'CRITICAL' ? 'failed' : r.severity === 'HIGH' ? 'pending' : 'info'}`}>
+                        {r.severity}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', margin: 0 }}>{r.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
 
           {/* Issues & Patch Diff Two-Column Layout */}
           <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: 24 }}>

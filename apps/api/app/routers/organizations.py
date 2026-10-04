@@ -232,6 +232,60 @@ async def create_api_key(
 
 
 @router.get(
+    "/auth/api-keys",
+    summary="List organization API keys",
+)
+async def list_api_keys(
+    ctx: TenantContext = Depends(require_scope("api_keys:write")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """List all API keys for the current organization."""
+    res = await db.execute(
+        select(ApiKey)
+        .where(ApiKey.organization_id == ctx.organization_id, ApiKey.is_active == True)
+        .order_by(ApiKey.created_at.desc())
+    )
+    keys = res.scalars().all()
+    items = []
+    for k in keys:
+        items.append({
+            "id": k.id,
+            "name": k.name,
+            "key_prefix": k.key_prefix,
+            "scopes": k.scopes.split(",") if k.scopes else [],
+            "is_test_mode": k.is_test_mode,
+            "is_active": k.is_active,
+            "created_at": k.created_at.isoformat() if k.created_at else None,
+            "last_used_at": k.last_used_at.isoformat() if k.last_used_at else None,
+        })
+    return {"items": items, "total": len(items)}
+
+
+@router.delete(
+    "/auth/api-keys/{key_id}",
+    summary="Revoke API key",
+)
+async def revoke_api_key(
+    key_id: str,
+    ctx: TenantContext = Depends(require_scope("api_keys:write")),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Revoke an active API key."""
+    res = await db.execute(
+        select(ApiKey).where(
+            ApiKey.id == key_id,
+            ApiKey.organization_id == ctx.organization_id,
+        )
+    )
+    k = res.scalar_one_or_none()
+    if not k:
+        raise HTTPException(status_code=404, detail="API key not found")
+    k.is_active = False
+    await db.flush()
+    return {"id": key_id, "status": "revoked"}
+
+
+@router.get(
     "/organizations/me",
     response_model=OrganizationResponse,
     summary="Get current organization",

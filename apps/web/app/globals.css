@@ -758,6 +758,204 @@ a:hover {
   max-width: 1280px;
   margin: 0 auto;
   padding: 60px 24px;
+  scroll-margin-top: 80px;
+}
+
+section[id], div[id] {
+  scroll-margin-top: 80px;
+}
+
+/* ── Architecture Topology Pipeline & Inspector ── */
+.pipeline-flow-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 1100px) {
+  .pipeline-flow-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .pipeline-flow-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pipeline-step-item {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 14px;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  text-align: left;
+}
+
+.pipeline-step-item:hover {
+  border-color: var(--brand-border);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px -4px rgba(37, 99, 235, 0.1);
+}
+
+.pipeline-step-item.active {
+  border-color: var(--brand-primary);
+  background: #ffffff;
+  box-shadow: 0 10px 25px -4px rgba(37, 99, 235, 0.18), 0 0 0 1px var(--brand-primary);
+}
+
+.pipeline-step-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--brand-light);
+  color: var(--brand-primary);
+  border: 1px solid var(--brand-border);
+}
+
+.pipeline-step-item.active .pipeline-step-badge {
+  background: var(--brand-primary);
+  color: #ffffff;
+  border-color: var(--brand-primary);
+}
+
+.pipeline-step-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pipeline-step-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand-light);
+  color: var(--brand-primary);
+  transition: all var(--transition-fast);
+}
+
+.pipeline-step-item.active .pipeline-step-icon {
+  background: #eff6ff;
+  color: var(--brand-primary);
+}
+
+.pipeline-step-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.pipeline-step-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.pipeline-step-tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: auto;
+  align-self: flex-start;
+}
+
+.pipeline-detail-window {
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 20px 40px -12px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
+  margin-bottom: 36px;
+}
+
+.pipeline-detail-grid {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+}
+
+@media (max-width: 900px) {
+  .pipeline-detail-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.pipeline-detail-content {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.pipeline-detail-code {
+  background: #0f172a;
+  border-left: 1px solid #1e293b;
+  display: flex;
+  flex-direction: column;
+}
+
+@media (max-width: 900px) {
+  .pipeline-detail-code {
+    border-left: none;
+    border-top: 1px solid #1e293b;
+  }
+}
+
+.specs-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .specs-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.spec-tile {
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.spec-tile-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.spec-tile-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.spec-tile-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 2px;
 }
 
 .section-header-center {

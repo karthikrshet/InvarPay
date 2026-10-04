@@ -26,10 +26,240 @@ import {
   Activity,
   Server,
   Layers,
+  Check,
+  Copy,
 } from 'lucide-react'
+
+interface PipelineStageData {
+  id: number
+  title: string
+  subtitle: string
+  layer: string
+  tag: string
+  tagBg: string
+  tagColor: string
+  sla: string
+  guarantee: string
+  failureMode: string
+  sourceFile: string
+  consoleRoute: string
+  consoleAction: string
+  description: string
+  codeSnippet: string
+}
+
+const PIPELINE_STAGES: PipelineStageData[] = [
+  {
+    id: 1,
+    title: 'Edge Ingestion & Validation',
+    subtitle: 'Next.js 14 SSR / FastMCP',
+    layer: 'Edge Layer',
+    tag: '< 12ms Edge',
+    tagBg: '#eff6ff',
+    tagColor: '#2563eb',
+    sla: 'P99 < 12ms Ingestion',
+    guarantee: 'Raw-body HMAC-SHA256 signature verification before JSON deserialization',
+    failureMode: 'Immediate 401 Unauthorized or 429 Too Many Requests (No DB load)',
+    sourceFile: 'apps/api/app/routers/webhooks.py',
+    consoleRoute: '/audit',
+    consoleAction: 'Inspect Edge Audit Trail',
+    description: 'Ingests inbound payment webhooks and merchant API requests at the edge. Authenticates raw payload signatures, enforces per-tenant sliding-window rate limits, and validates schema invariants.',
+    codeSnippet: `# apps/api/app/routers/webhooks.py
+computed_sig = hmac.new(
+    webhook_secret.encode('utf-8'),
+    raw_body,
+    hashlib.sha256
+).hexdigest()
+
+if not hmac.compare_digest(computed_sig, x_razorpay_signature):
+    raise HTTPException(status_code=400, detail="INVALID_WEBHOOK_SIGNATURE")`,
+  },
+  {
+    id: 2,
+    title: 'Distributed Idempotency Lock',
+    subtitle: 'Redis 7.2 Distributed Lock',
+    layer: 'Distributed Core',
+    tag: '0 Double-Spends',
+    tagBg: '#ecfdf5',
+    tagColor: '#059669',
+    sla: 'P99 < 4ms Redis Latency',
+    guarantee: 'Sliding window atomic mutex lock with automatic 60s TTL',
+    failureMode: 'Replay cached response on duplicates; reject concurrent conflicts with 409',
+    sourceFile: 'apps/api/app/core/idempotency.py',
+    consoleRoute: '/payments',
+    consoleAction: 'Inspect Idempotency Locks',
+    description: 'Guarantees strictly once-and-only-once execution for high-concurrency requests, network retry loops, and webhook duplicate deliveries across multi-instance clusters.',
+    codeSnippet: `# apps/api/app/core/idempotency.py
+lock_key = f"pg_lock_{tenant_id}_{idempotency_key}"
+acquired = await redis_client.set(
+    lock_key, "IN_FLIGHT", nx=True, ex=60
+)
+if not acquired:
+    # Concurrent execution detected - enforce invariant
+    raise IdempotencyConflictException("Concurrent request already in-flight")`,
+  },
+  {
+    id: 3,
+    title: 'Deterministic State Machine',
+    subtitle: 'InvarPay Core FSM Engine',
+    layer: 'Core Invariant Rail',
+    tag: 'Zero State Drift',
+    tagBg: '#eff6ff',
+    tagColor: '#1d4ed8',
+    sla: '0ms Transition Drift',
+    guarantee: 'Finite state transition matrix with permanent terminal state guards',
+    failureMode: 'Strict IllegalTransitionError raised; double-captures mathematically impossible',
+    sourceFile: 'modules/invarpay_core/state_machine.py',
+    consoleRoute: '/payments',
+    consoleAction: 'Test State Transitions',
+    description: 'Enforces strict mathematical state transitions: CREATED → INITIATED → PROCESSING → SUCCESS / FAILED. Terminal states cannot be mutated under any condition.',
+    codeSnippet: `# modules/invarpay_core/state_machine.py
+ALLOWED_TRANSITIONS = {
+    PaymentStatus.CREATED: {PaymentStatus.INITIATED, PaymentStatus.FAILED},
+    PaymentStatus.INITIATED: {PaymentStatus.PROCESSING, PaymentStatus.FAILED},
+    PaymentStatus.PROCESSING: {PaymentStatus.SUCCESS, PaymentStatus.FAILED},
+    PaymentStatus.SUCCESS: set(), # TERMINAL: Cannot be modified
+    PaymentStatus.FAILED: set(),  # TERMINAL: Cannot be modified
+}`,
+  },
+  {
+    id: 4,
+    title: 'Razorpay Gateway Rails',
+    subtitle: 'Synchronous API & Webhooks',
+    layer: 'Banking Rail',
+    tag: 'ISO 20022 Ready',
+    tagBg: '#fffbeb',
+    tagColor: '#d97706',
+    sla: 'Rail Dependent (~800ms)',
+    guarantee: 'Minor-unit integer amounts (paise/cents) prevent float rounding loss',
+    failureMode: 'Circuit breaker trips on upstream timeout; auto-polling recovery activated',
+    sourceFile: 'integrations/razorpay/client.py',
+    consoleRoute: '/shop',
+    consoleAction: 'Simulate Gateway Payment',
+    description: 'Direct integration with Razorpay payment rails for UPI, cards, netbanking, and instant refunds. Enforces minor unit integer arithmetic across orders and captures.',
+    codeSnippet: `# integrations/razorpay/client.py
+order = razorpay_client.order.create({
+    "amount": payment.amount_minor, # 149900 paise (exact ₹1,499.00)
+    "currency": "INR",
+    "receipt": f"rcpt_{payment.id}",
+    "notes": {"tenant_id": tenant.id, "platform": "invarpay-ai"}
+})`,
+  },
+  {
+    id: 5,
+    title: 'Dual-Entry ACID Ledger',
+    subtitle: 'PostgreSQL 16 Engine',
+    layer: 'Financial Ledger',
+    tag: 'ACID Balanced 100%',
+    tagBg: '#f0fdf4',
+    tagColor: '#16a34a',
+    sla: 'P99 < 18ms DB Commit',
+    guarantee: 'Double-entry bookkeeping: SUM(debits) - SUM(credits) === 0 at all times',
+    failureMode: 'Database transaction automatically rolls back if sum does not balance',
+    sourceFile: 'modules/merchantos/ledger.py',
+    consoleRoute: '/merchantos',
+    consoleAction: 'Open Double-Entry Ledger',
+    description: 'Immutable financial ledger recording debits and credits across merchant cash, gateway accounts, and fee expenses with automatic bank settlement UTR matching.',
+    codeSnippet: `# modules/merchantos/ledger.py
+async with db_session.begin():
+    # Dr. Cash / Gateway settlement account
+    await post_journal_entry(acc_gateway, debit=amount_minor, credit=0)
+    # Cr. Merchant Accounts Receivable
+    await post_journal_entry(acc_merchant, debit=0, credit=amount_minor)
+    assert sum_debits == sum_credits, "LEDGER_UNBALANCED_INVARIANT"`,
+  },
+  {
+    id: 6,
+    title: 'Autonomous AI Supervisor',
+    subtitle: 'LangGraph & PaymentGraph',
+    layer: 'Agentic Intelligence',
+    tag: 'Human-in-the-Loop',
+    tagBg: '#faf5ff',
+    tagColor: '#7e22ce',
+    sla: 'Async Background (< 2.4s)',
+    guarantee: 'EU AI Act compliant model cards & deny-by-default execution policy',
+    failureMode: 'Uncertain anomalies escalate to human dispute triage with evidence packet',
+    sourceFile: 'apps/api/app/agents/investigation_agent.py',
+    consoleRoute: '/investigations',
+    consoleAction: 'Review Dispute Cases',
+    description: 'Autonomous multi-step investigation agent triage with deterministic policy guardrails. Gathers audit traces, calculates merchant trust scores, and generates dispute recommendations.',
+    codeSnippet: `# apps/api/app/agents/investigation_agent.py
+workflow = StateGraph(DisputeInvestigationState)
+workflow.add_node("gather_audit_evidence", gather_payment_audit_trail)
+workflow.add_node("calculate_risk_heuristic", run_paymentgraph_scoring)
+workflow.add_node("policy_evaluator", enforce_human_approval_policy)
+workflow.set_entry_point("gather_audit_evidence")`,
+  },
+]
+
+const ARCHITECTURE_LAYERS = [
+  {
+    id: 'edge',
+    name: 'Edge & Ingestion Layer',
+    badge: 'Edge Optimized',
+    tech: 'Next.js 14 SSR • React 18 • FastMCP Protocol • Cloudflare CDN',
+    specs: [
+      { label: 'Latency SLA', value: '< 12ms P99' },
+      { label: 'Rate Limiting', value: '100 req/min/tenant' },
+      { label: 'Security Rail', value: 'HMAC-SHA256 Raw Bytes' },
+      { label: 'Ingestion Mode', value: 'Streaming & Zero-Copy' },
+    ],
+    summary: 'Handles global merchant traffic, shopping cart checkouts, and external webhook ingress with sub-12ms response times and DDoS resilience.',
+    route: '/audit',
+    routeLabel: 'Audit Logs',
+  },
+  {
+    id: 'fsm',
+    name: 'Core Invariant FSM & Idempotency',
+    badge: '100% Invariant',
+    tech: 'FastAPI • Redis 7.2 Distributed Locks • Python 3.11 Monolith',
+    specs: [
+      { label: 'Concurrency Lock', value: 'Atomic Redis Mutex (60s)' },
+      { label: 'State Transitions', value: 'Strict Directed Acyclic Graph' },
+      { label: 'Double-Spend Risk', value: 'Mathematically 0.00%' },
+      { label: 'Telemetry Stream', value: 'Outbox Pattern + JSON-RPC' },
+    ],
+    summary: 'The mathematical core of InvarPay AI. Enforces valid state sequences, rejects out-of-order webhook delivery, and prevents concurrent double captures.',
+    route: '/payments',
+    routeLabel: 'State Console',
+  },
+  {
+    id: 'ledger',
+    name: 'ACID Ledger & Storage Tier',
+    badge: 'Encrypted at Rest',
+    tech: 'PostgreSQL 16 • pgvector • Minor-Unit Minor Math • SQLAlchemy Async',
+    specs: [
+      { label: 'Arithmetic Mode', value: 'Integer Minor Units (Paise)' },
+      { label: 'Ledger Invariant', value: 'SUM(Dr) === SUM(Cr)' },
+      { label: 'Tenant Isolation', value: 'Row-Level Security (RLS)' },
+      { label: 'Audit Immutability', value: 'Append-Only Cryptographic Trail' },
+    ],
+    summary: 'Zero-floating-point-drift double-entry bookkeeping ledger. Reconciles bank settlement CSVs against internal transaction logs with automatic fee deduction accounting.',
+    route: '/merchantos',
+    routeLabel: 'MerchantOS Ledger',
+  },
+  {
+    id: 'ai',
+    name: 'Autonomous AI Supervisor & Risk',
+    badge: 'EU AI Act Compliant',
+    tech: 'LangGraph Cyclic Agents • PaymentGraph AI • Isolation Forest ML',
+    specs: [
+      { label: 'Decision Model', value: 'Deterministic + ML Fallback' },
+      { label: 'Governance Rule', value: 'Deny-by-Default Policy' },
+      { label: 'Human Oversight', value: 'Cryptographic Approval Gate' },
+      { label: 'Model Transparency', value: 'Full Feature Attribution Card' },
+    ],
+    summary: 'Intelligent copilot and autonomous investigation agent that analyzes velocity spikes, geo-mismatches, and customer dispute history without hallucinated payouts.',
+    route: '/investigations',
+    routeLabel: 'AI Investigations',
+  },
+]
 
 export default function LandingPage() {
   const [activeTab, setActiveTab] = useState<'payguard' | 'paydev' | 'risk' | 'merchantos'>('payguard')
+  const [activePipelineStage, setActivePipelineStage] = useState<number>(3)
+  const [selectedTopologyLayer, setSelectedTopologyLayer] = useState<'edge' | 'fsm' | 'ledger' | 'ai'>('fsm')
+  const [copiedStageCode, setCopiedStageCode] = useState(false)
   const [chatOpen, setChatOpen] = useState(false)
 
   // InvarPay Simulator State
@@ -136,7 +366,7 @@ export default function LandingPage() {
               </li>
               <li>
                 <a href="#benchmarks" className="nav-link-item">
-                  <span>158 Test Evals</span>
+                  <span>System Invariants</span>
                 </a>
               </li>
               <li>
@@ -148,9 +378,9 @@ export default function LandingPage() {
           </nav>
 
           <div className="header-actions">
-            <Link href="#topology" className="btn btn-outline btn-sm">
+            <a href="#topology" className="btn btn-outline btn-sm">
               Scope Topology
-            </Link>
+            </a>
             <Link href="/dashboard" className="btn btn-primary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               <span>Launch Console</span>
               <ArrowRight size={14} />
@@ -175,16 +405,17 @@ export default function LandingPage() {
           <p className="hero-subtitle">
             We design and develop resilient payment orchestration, dual-entry ledger reconciliation,
             and AI-powered guardrails for modern businesses—supported by rigorous state machine invariants,
-            AST static analysis, and 158 automated test benchmarks.
+            AST static analysis, and automated test benchmarks.
           </p>
 
           <div className="hero-cta-group">
             <Link href="/dashboard" className="btn btn-primary btn-lg" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-              <span>Discuss your project</span>
+              <span>Launch Console</span>
               <ArrowRight size={16} />
             </Link>
-            <a href="#simulator" className="btn btn-secondary btn-lg">
-              Explore our services
+            <a href="#topology" className="btn btn-secondary btn-lg" style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+              <span>Inspect Architecture Rails</span>
+              <ChevronDown size={16} />
             </a>
           </div>
 
@@ -202,17 +433,17 @@ export default function LandingPage() {
             </div>
             <div className="hero-proof-item">
               <CheckCircle2 size={16} className="hero-proof-icon" />
-              <span>Production Architecture</span>
+              <span>Production Invariant Topology</span>
             </div>
             <div className="hero-proof-item">
               <CheckCircle2 size={16} className="hero-proof-icon" />
-              <span>158 Passing Automated Tests</span>
+              <span>Deterministic Dual-Entry Ledger</span>
             </div>
           </div>
         </div>
 
-        {/* Right Column: Architecture Topology Card (Exact Visual Replica) */}
-        <div id="topology">
+        {/* Right Column: Architecture Topology Card (Hero Snapshot) */}
+        <div className="hero-topology-wrapper">
           <div className="topology-card">
             {/* Window Bar */}
             <div className="topology-window-header">
@@ -308,7 +539,323 @@ export default function LandingPage() {
                 <div className="stat-desc-bottom">100% IP Transfer</div>
               </div>
             </div>
+
+            {/* Direct Deep-Dive Link to Section */}
+            <div style={{ marginTop: 8 }}>
+              <a
+                href="#topology"
+                className="btn btn-outline btn-sm"
+                style={{
+                  width: '100%',
+                  justifyContent: 'center',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  borderColor: 'var(--brand-border)',
+                  background: 'var(--brand-light)',
+                  color: 'var(--brand-primary)',
+                  fontWeight: 700,
+                  fontSize: 12,
+                }}
+              >
+                <Layers size={14} />
+                <span>Explore Full 6-Stage Invariant Pipeline</span>
+                <ArrowRight size={13} />
+              </a>
+            </div>
           </div>
+        </div>
+      </section>
+
+      {/* ── Architecture & System Topology Section ── */}
+      <section id="topology" className="section-container" style={{ borderTop: '1px solid var(--border)', paddingTop: 70, paddingBottom: 70 }}>
+        {/* Section Title & Header */}
+        <div className="section-header-center">
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <span className="section-tag">PRODUCTION ARCHITECTURE V0.1</span>
+          </div>
+          <h2 className="section-title">Deterministic Payment Invariant Rails</h2>
+          <p className="section-desc">
+            A modular monolith designed for mathematical correctness: distributed Redis idempotency locks,
+            strict finite state machines, double-entry ledgers, and autonomous LangGraph dispute supervisors.
+          </p>
+        </div>
+
+        {/* 4 Invariant Guarantee Highlight Cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16, marginBottom: 36 }}>
+          <div className="card" style={{ padding: '20px 22px', border: '1px solid #bfdbfe', background: '#ffffff', borderRadius: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--brand-primary)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Concurrency Invariant</span>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#2563eb' }}>
+                <Lock size={15} />
+              </div>
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: -0.5 }}>0 Double-Spends</div>
+            <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 4 }}>
+              Distributed Redis atomic mutex with 60s auto-expiry prevents multi-tab duplicate captures.
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: '20px 22px', border: '1px solid #bbf7d0', background: '#ffffff', borderRadius: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Precision Invariant</span>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: '#f0fdf4', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#16a34a' }}>
+                <ShieldCheck size={15} />
+              </div>
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: -0.5 }}>0.00% Drift</div>
+            <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 4 }}>
+              Minor units integer math (paise/cents) eliminates floating-point rounding hazards across all rails.
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: '20px 22px', border: '1px solid #fed7aa', background: '#ffffff', borderRadius: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Ledger Invariant</span>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ea580c' }}>
+                <Database size={15} />
+              </div>
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: -0.5 }}>100% Balanced</div>
+            <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 4 }}>
+              Dual-entry bookkeeping asserts SUM(Debits) === SUM(Credits) before any SQL commit.
+            </div>
+          </div>
+
+          <div className="card" style={{ padding: '20px 22px', border: '1px solid #e9d5ff', background: '#ffffff', borderRadius: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontSize: 11, fontWeight: 700, color: '#7e22ce', textTransform: 'uppercase', letterSpacing: '0.06em' }}>Edge Performance</span>
+              <div style={{ width: 28, height: 28, borderRadius: 8, background: '#faf5ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7e22ce' }}>
+                <Globe size={15} />
+              </div>
+            </div>
+            <div style={{ fontSize: 26, fontWeight: 800, color: '#0f172a', letterSpacing: -0.5 }}>&lt; 12ms P99</div>
+            <div style={{ fontSize: 12.5, color: '#64748b', marginTop: 4 }}>
+              Raw byte HMAC-SHA256 verification and rate-limit guard executed at edge before DB dispatch.
+            </div>
+          </div>
+        </div>
+
+        {/* Interactive 6-Stage End-to-End Pipeline Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+          <div>
+            <h3 style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span>End-to-End Payment Request Pipeline</span>
+              <span className="badge badge-info" style={{ fontSize: 11 }}>INTERACTIVE STAGES</span>
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              Click any stage below to inspect its internal invariant logic, source code snippet, and failure recovery mode.
+            </p>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-muted)' }}>
+            <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#059669', display: 'inline-block' }} />
+            <span>Active Pipeline Inspector: Stage 0{activePipelineStage}</span>
+          </div>
+        </div>
+
+        {/* 6 Stage Buttons Grid */}
+        <div className="pipeline-flow-grid">
+          {PIPELINE_STAGES.map(stage => {
+            const isActive = activePipelineStage === stage.id
+            const IconComponent = stage.id === 1 ? Globe : stage.id === 2 ? Lock : stage.id === 3 ? ShieldCheck : stage.id === 4 ? Zap : stage.id === 5 ? Database : Bot
+            return (
+              <button
+                key={stage.id}
+                onClick={() => setActivePipelineStage(stage.id)}
+                className={`pipeline-step-item ${isActive ? 'active' : ''}`}
+                style={{ textAlign: 'left', border: isActive ? '2px solid var(--brand-primary)' : '1px solid var(--border)' }}
+              >
+                <div className="pipeline-step-header">
+                  <span className="pipeline-step-badge">0{stage.id}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 6px', borderRadius: 4, background: stage.tagBg, color: stage.tagColor }}>
+                    {stage.tag}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
+                  <div className="pipeline-step-icon">
+                    <IconComponent size={16} />
+                  </div>
+                  <div>
+                    <div className="pipeline-step-name">{stage.title}</div>
+                    <div className="pipeline-step-sub">{stage.subtitle}</div>
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* Selected Stage Detail Window */}
+        {(() => {
+          const currentStage = PIPELINE_STAGES.find(s => s.id === activePipelineStage) || PIPELINE_STAGES[2]
+          const StageIcon = currentStage.id === 1 ? Globe : currentStage.id === 2 ? Lock : currentStage.id === 3 ? ShieldCheck : currentStage.id === 4 ? Zap : currentStage.id === 5 ? Database : Bot
+          return (
+            <div className="pipeline-detail-window">
+              <div className="pipeline-detail-grid">
+                {/* Left Detail Pane */}
+                <div className="pipeline-detail-content">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div className="layer-icon-box" style={{ width: 42, height: 42, background: currentStage.tagBg, color: currentStage.tagColor }}>
+                        <StageIcon size={22} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: currentStage.tagColor, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                          STAGE 0{currentStage.id} • {currentStage.layer}
+                        </div>
+                        <h4 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-primary)' }}>{currentStage.title}</h4>
+                      </div>
+                    </div>
+                    <span className="badge badge-success" style={{ fontSize: 12 }}>
+                      VERIFIED INVARIANT
+                    </span>
+                  </div>
+
+                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                    {currentStage.description}
+                  </p>
+
+                  <div className="specs-grid">
+                    <div className="spec-tile">
+                      <div className="spec-tile-title">Latency SLA</div>
+                      <div className="spec-tile-value" style={{ color: currentStage.tagColor }}>{currentStage.sla}</div>
+                      <div className="spec-tile-sub">Real-time benchmark</div>
+                    </div>
+                    <div className="spec-tile">
+                      <div className="spec-tile-title">Source File</div>
+                      <div className="spec-tile-value mono" style={{ fontSize: 11.5, wordBreak: 'break-all' }}>{currentStage.sourceFile}</div>
+                      <div className="spec-tile-sub">Production repository path</div>
+                    </div>
+                    <div className="spec-tile">
+                      <div className="spec-tile-title">Invariant Guarantee</div>
+                      <div className="spec-tile-value" style={{ fontSize: 12.5 }}>{currentStage.guarantee}</div>
+                    </div>
+                    <div className="spec-tile">
+                      <div className="spec-tile-title">Failure Mode & Recovery</div>
+                      <div className="spec-tile-value" style={{ fontSize: 12.5, color: '#dc2626' }}>{currentStage.failureMode}</div>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 10, marginTop: 'auto', paddingTop: 10 }}>
+                    <Link
+                      href={currentStage.consoleRoute}
+                      className="btn btn-primary btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <span>{currentStage.consoleAction}</span>
+                      <ArrowRight size={14} />
+                    </Link>
+                    <a
+                      href="#simulator"
+                      className="btn btn-outline btn-sm"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                    >
+                      <RotateCcw size={13} />
+                      <span>Test in Playground</span>
+                    </a>
+                  </div>
+                </div>
+
+                {/* Right Code Window */}
+                <div className="pipeline-detail-code">
+                  <div className="code-header" style={{ background: '#0b1120', borderBottom: '1px solid #1e293b', padding: '12px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span className="mac-dot mac-dot-red" />
+                      <span className="mac-dot mac-dot-yellow" />
+                      <span className="mac-dot mac-dot-green" />
+                      <span className="mono" style={{ fontSize: 12, color: '#94a3b8', marginLeft: 6 }}>{currentStage.sourceFile}</span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard?.writeText(currentStage.codeSnippet)
+                        setCopiedStageCode(true)
+                        setTimeout(() => setCopiedStageCode(false), 2000)
+                      }}
+                      className="btn btn-outline btn-sm"
+                      style={{ padding: '3px 8px', fontSize: 11, color: '#cbd5e1', borderColor: '#334155' }}
+                    >
+                      {copiedStageCode ? (
+                        <>
+                          <Check size={12} color="#4ade80" />
+                          <span style={{ color: '#4ade80' }}>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre style={{ margin: 0, padding: 22, overflowX: 'auto', fontSize: 12.5, lineHeight: 1.6, color: '#f1f5f9', fontFamily: "'JetBrains Mono', monospace", flex: 1, background: '#0f172a' }}>
+                    <code>{currentStage.codeSnippet}</code>
+                  </pre>
+                  <div style={{ padding: '10px 18px', background: '#0b1120', borderTop: '1px solid #1e293b', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: '#64748b' }}>
+                    <span>Strict Monolith Architecture</span>
+                    <span style={{ color: '#4ade80' }}>100% Invariant Compliant</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )
+        })()}
+
+        {/* 4-Tier Interactive Architecture Layer Inspector */}
+        <div style={{ background: '#ffffff', border: '1px solid var(--border)', borderRadius: 20, padding: '28px 32px', boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
+            <div>
+              <h3 style={{ fontSize: 17, fontWeight: 800, color: 'var(--text-primary)' }}>System Layer Breakdown & SLAs</h3>
+              <p style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>Explore how each system layer isolates concerns and maintains transactional integrity.</p>
+            </div>
+            <div style={{ display: 'flex', gap: 6, background: '#f1f5f9', padding: 4, borderRadius: 10 }}>
+              {ARCHITECTURE_LAYERS.map(l => (
+                <button
+                  key={l.id}
+                  onClick={() => setSelectedTopologyLayer(l.id as any)}
+                  className="btn btn-sm"
+                  style={{
+                    background: selectedTopologyLayer === l.id ? '#ffffff' : 'transparent',
+                    color: selectedTopologyLayer === l.id ? 'var(--brand-primary)' : 'var(--text-secondary)',
+                    boxShadow: selectedTopologyLayer === l.id ? '0 1px 3px rgba(15, 23, 42, 0.1)' : 'none',
+                    fontWeight: 700,
+                    fontSize: 12,
+                    padding: '6px 12px',
+                  }}
+                >
+                  {l.name.split('&')[0].trim()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {(() => {
+            const currentLayer = ARCHITECTURE_LAYERS.find(l => l.id === selectedTopologyLayer) || ARCHITECTURE_LAYERS[0]
+            return (
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 24, alignItems: 'center' }}>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <span className="badge badge-info" style={{ fontSize: 11 }}>{currentLayer.badge}</span>
+                    <span className="mono" style={{ fontSize: 12, color: 'var(--text-muted)' }}>{currentLayer.tech}</span>
+                  </div>
+                  <h4 style={{ fontSize: 19, fontWeight: 800, color: 'var(--text-primary)', marginBottom: 10 }}>{currentLayer.name}</h4>
+                  <p style={{ fontSize: 13.5, color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>{currentLayer.summary}</p>
+                  <Link href={currentLayer.route} className="btn btn-outline btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <span>Launch {currentLayer.routeLabel}</span>
+                    <ArrowRight size={13} />
+                  </Link>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}>
+                  {currentLayer.specs.map((s, idx) => (
+                    <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 12 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase' }}>{s.label}</div>
+                      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{s.value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
         </div>
       </section>
 

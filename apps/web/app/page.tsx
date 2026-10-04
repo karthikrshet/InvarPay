@@ -777,22 +777,22 @@ export default function LandingPage() {
       {/* ── Benchmarks & Test Suite Bar ── */}
       <section id="benchmarks" className="section-container" style={{ paddingTop: 0 }}>
         <div className="card" style={{ padding: '32px 40px', background: 'linear-gradient(135deg, #1d4ed8 0%, #2563eb 50%, #0284c7 100%)', color: '#ffffff', borderRadius: 24, boxShadow: '0 20px 40px rgba(37, 99, 235, 0.25)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, textAlign: 'center' }}>
-            <div>
-              <div style={{ fontSize: 38, fontWeight: 800 }}>158 / 158</div>
-              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>Automated Pytest Suite</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 24, textAlign: 'center', alignItems: 'center' }}>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 'clamp(26px, 2.8vw, 36px)', fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.1 }}>163 / 163</div>
+              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 6, whiteSpace: 'nowrap' }}>Automated Pytest Suite</div>
             </div>
-            <div>
-              <div style={{ fontSize: 38, fontWeight: 800 }}>0 Errors</div>
-              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>TypeScript & Ruff Checks</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 'clamp(26px, 2.8vw, 36px)', fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.1 }}>0 Errors</div>
+              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 6, whiteSpace: 'nowrap' }}>TypeScript & Ruff Checks</div>
             </div>
-            <div>
-              <div style={{ fontSize: 38, fontWeight: 800 }}>89 Commits</div>
-              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>8-Day Clean Git Evolution</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 'clamp(26px, 2.8vw, 36px)', fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.1 }}>90+ Commits</div>
+              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 6, whiteSpace: 'nowrap' }}>Clean Git Evolution</div>
             </div>
-            <div>
-              <div style={{ fontSize: 38, fontWeight: 800 }}>100% Invariant</div>
-              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 4 }}>Zero Leaky Currency Floats</div>
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontSize: 'clamp(26px, 2.8vw, 36px)', fontWeight: 800, whiteSpace: 'nowrap', lineHeight: 1.1 }}>100%</div>
+              <div style={{ fontSize: 13, opacity: 0.9, marginTop: 6, whiteSpace: 'nowrap' }}>Invariant In-Memory & DB</div>
             </div>
           </div>
         </div>

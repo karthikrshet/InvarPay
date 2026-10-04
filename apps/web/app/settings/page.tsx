@@ -268,8 +268,9 @@ export default function SettingsPage() {
           </div>
         </header>
 
-        {/* Tab Navigation */}
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '1px solid var(--border-color)', paddingBottom: 12 }}>
+        <div className="page-body">
+          {/* Tab Navigation */}
+          <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: '1px solid var(--border-color)', paddingBottom: 12, overflowX: 'auto' }}>
           {[
             { id: 'credentials', label: 'API Keys & Auth', icon: Key },
             { id: 'gateways', label: 'Payment Adapters', icon: Zap },
@@ -822,12 +823,13 @@ export default function SettingsPage() {
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: 'var(--text-muted)' }}>Pytest Test Suite</span>
-                  <span style={{ color: '#059669', fontWeight: 700 }}>158 / 158 PASS</span>
+                  <span style={{ color: '#059669', fontWeight: 700 }}>163 / 163 PASS</span>
                 </div>
               </div>
             </div>
           </div>
         )}
+        </div>
       </main>
     </div>
   )

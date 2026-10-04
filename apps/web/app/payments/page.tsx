@@ -201,7 +201,8 @@ export default function PaymentsPage() {
           </div>
         </header>
 
-        {/* Telemetry Metric KPI Cards */}
+        <div className="page-body">
+          {/* Telemetry Metric KPI Cards */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16, marginBottom: 24 }}>
           <div className="card" style={{ padding: '16px 20px' }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: 4 }}>
@@ -437,6 +438,7 @@ export default function PaymentsPage() {
                 ))}
               </tbody>
             </table>
+          </div>
           </div>
         </div>
       </main>

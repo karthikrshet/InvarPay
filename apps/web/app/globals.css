@@ -1051,6 +1051,7 @@ a:hover {
 
 .sidebar {
   width: 256px;
+  min-width: 256px;
   background: #ffffff;
   border-right: 1px solid var(--border);
   display: flex;
@@ -1168,6 +1169,13 @@ a:hover {
   padding: 32px;
   max-width: 1400px;
   width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 768px) {
+  .page-body {
+    padding: 16px;
+  }
 }
 
 /* ── KPI Cards & Metric Grid ── */
@@ -1360,11 +1368,12 @@ a:hover {
   .nav-links {
     display: none;
   }
-  .app-layout {
+  .app-layout, .layout {
     flex-direction: column;
   }
   .sidebar {
     width: 100%;
+    min-width: 100%;
     height: auto;
     position: static;
   }

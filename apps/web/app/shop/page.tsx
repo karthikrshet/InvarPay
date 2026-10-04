@@ -293,7 +293,8 @@ export default function ShopPage() {
           </div>
         </header>
 
-        {/* Safety Boundary Banner */}
+        <div className="page-body">
+          {/* Safety Boundary Banner */}
         <div
           className="card"
           style={{
@@ -772,6 +773,7 @@ export default function ShopPage() {
               </ul>
             </div>
           </div>
+        </div>
         </div>
       </main>
     </div>

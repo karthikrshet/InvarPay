@@ -115,6 +115,7 @@ class TestDualEntryLedger:
 
     def test_unbalanced_journal_entry_raises_error(self) -> None:
         import pytest
+
         from modules.merchantos.finance import JournalEntry, JournalLine
         with pytest.raises(ValueError, match="Dual-entry invariant failed"):
             JournalEntry(

@@ -23,7 +23,16 @@ from fastapi.responses import JSONResponse
 
 from apps.api.app.core.config import get_settings
 from apps.api.app.core.database import check_db_connectivity
-from apps.api.app.routers import audit, orders, organizations, payments, webhooks
+from apps.api.app.routers import (
+    audit,
+    orders,
+    organizations,
+    payments,
+    webhooks,
+)
+from apps.api.app.routers import (
+    investigations as investigations_router,
+)
 
 # Phase 5
 from apps.api.app.routers import merchantos as merchantos_router
@@ -170,6 +179,7 @@ def create_app() -> FastAPI:
     app.include_router(payments.router, prefix=api_prefix, tags=["Payments & Investigations"])
     app.include_router(webhooks.router, prefix=api_prefix, tags=["Webhooks"])
     app.include_router(audit.router, prefix=api_prefix, tags=["Audit"])
+    app.include_router(investigations_router.router, prefix=api_prefix, tags=["InvarInvestigator"])
 
     # Phase 2 — Recovery & MCP
     app.include_router(recovery_router.router, prefix=api_prefix, tags=["Recovery (Phase 2)"])
